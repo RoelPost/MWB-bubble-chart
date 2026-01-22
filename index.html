@@ -18,7 +18,7 @@
     <div id="controls">
         <div id="time-display">
             <span class="time-label">Tijd:</span>
-            <span id="current-time">06:00</span>
+            <span id="current-time">14 Jan 02:00</span>
         </div>
 
         <div id="speed-control">
@@ -33,15 +33,15 @@
     <div id="chart"></div>
 
     <div id="legend">
-        <div class="legend-title">Stikstofuitstoot (kg/uur)</div>
+        <div class="legend-title">NOx uitstoot (kg per interval)</div>
         <div class="legend-gradient">
             <div class="gradient-bar"></div>
             <div class="gradient-labels">
                 <span>0</span>
-                <span>2.5</span>
-                <span>5</span>
-                <span>7.5</span>
-                <span>10+</span>
+                <span>0.01</span>
+                <span>0.025</span>
+                <span>0.04</span>
+                <span>0.05+</span>
             </div>
         </div>
     </div>
@@ -53,24 +53,26 @@
 
 <script>
 // Configuration (based on tutorial)
-var margin = {top: 115, right: 40, bottom: 60, left: 100},
-    width = 1600 - margin.left - margin.right,
-    height = 600 - margin.top - margin.bottom;
+var margin = {top: 100, right: 30, bottom: 50, left: 110},
+    width = 1400 - margin.left - margin.right,
+    height = 550 - margin.top - margin.bottom;
 
 var node_radius = 5,
     padding = 1,
     cluster_padding = 4,
     num_nodes = 150;
 
-// Color scale for nitrogen emissions (0 to ~11)
-// Custom scale: grey for 0, then yellow-orange-red for 1-11
+// Color scale for nitrogen emissions (0 to ~0.07 kg based on actual data)
+// Custom scale: grey for 0, then yellow-orange-red for emissions
 var colorScale = function(value) {
-    if (value === 0) {
+    if (value === 0 || value === null || isNaN(value)) {
         return "#999999"; // Grey for off/no emissions
     }
-    // Yellow-Orange-Red scale for actual emissions
-    var scale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0.5, 11]);
-    return scale(value);
+    // Yellow-Orange-Red scale, starting from darker yellow
+    // Map 0.001-0.05 to 0.25-1.0 of the color scale (skipping lightest yellows)
+    var t = Math.min(1, Math.max(0, (value - 0.001) / (0.05 - 0.001)));
+    var adjustedT = 0.25 + t * 0.75; // Start at 25% into the scale
+    return d3.interpolateYlOrRd(adjustedT);
 };
 
 var svg = d3.select("#chart").append("svg")
@@ -79,12 +81,12 @@ var svg = d3.select("#chart").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-// Power states and their y positions
+// Power states and their y positions (matching belasting_categorie values)
 var powerStates = {
-    "high": { y: height * 0.15, color: "#D0021B", label: "Hoog vermogen" },
-    "low": { y: height * 0.38, color: "#F5A623", label: "Laag vermogen" },
-    "idle": { y: height * 0.62, color: "#4A90E2", label: "Idle" },
-    "off": { y: height * 0.85, color: "#999999", label: "Uitgeschakeld" }
+    "Hoge belasting": { y: height * 0.15, color: "#D0021B", label: "Hoge belasting" },
+    "Lage belasting": { y: height * 0.38, color: "#F5A623", label: "Lage belasting" },
+    "Stationair": { y: height * 0.62, color: "#4A90E2", label: "Stationair" },
+    "Uit": { y: height * 0.85, color: "#999999", label: "Uit" }
 };
 
 // Machine types and foci will be set after loading data
@@ -103,26 +105,30 @@ var isPlaying = true;
 var animationSpeed = 1000; // milliseconds per update
 
 // Load CSV data
-d3.csv("data/sample-data.csv").then(function(data) {
+d3.csv("data/NOx_intervals_with_belasting.csv").then(function(data) {
     // Parse the data and convert emissions to numbers
-    machineData = data.map(function(d) {
+    machineData = data.map(function(d, i) {
         return {
-            machine_id: d.machine_id,
-            machine_type: d.machine_type,
-            timestamp: d.timestamp,
-            power_state: d.power_state,
-            nitrogen_emission: +d.nitrogen_emission // Convert to number
+            machine_id: d.device_id,
+            machine_type: d.MachineCategorie,
+            time_interval: d.time_interval,
+            power_state: d.belasting_categorie,
+            nitrogen_emission: +d.NOx_mass_flow_kg || 0,
+            motorbelasting: +d.motorbelasting || 0
         };
     });
 
-    // Get unique timestamps
-    uniqueTimes = [...new Set(data.map(d => d.timestamp))].sort();
+    // Get unique timestamps sorted chronologically
+    uniqueTimes = [...new Set(data.map(d => d.time_interval))].sort();
 
     // Get unique machines
-    var machines = [...new Set(data.map(d => d.machine_id))];
+    var machines = [...new Set(data.map(d => d.device_id))];
+
+    // Get unique machines
+    var machines = [...new Set(data.map(d => d.device_id))];
 
     // Get unique machine types from data
-    machineTypes = [...new Set(data.map(d => d.machine_type))].sort();
+    machineTypes = [...new Set(data.map(d => d.MachineCategorie))].sort();
     var numTypes = machineTypes.length;
     var typeSpacing = width / (numTypes + 1);
 
@@ -143,27 +149,26 @@ d3.csv("data/sample-data.csv").then(function(data) {
 
     // Calculate statistics for each machine type
     var typeStats = {};
-    var typeIndex = 0;
     machineTypes.forEach(function(type) {
         var typeMachines = machineData.filter(d => d.machine_type === type);
-        var totalMinutes = typeMachines.length;
+        var totalRecords = typeMachines.length;
 
-        // Calculate actual operating hours (convert minutes to hours, around 5 hours average)
-        var activeMinutes = typeMachines.filter(d => d.power_state !== 'off').length;
-        var operatingHours = (activeMinutes / 60).toFixed(1); // Convert to hours
+        // Count active records (not "Uit")
+        var activeRecords = typeMachines.filter(d => d.power_state !== 'Uit').length;
 
-        // Generate semi-random but consistent engine load between 15-35%
-        // Use type index to make it consistent but varied
-        var baseLoad = 15 + (typeIndex % 20); // 15-34
-        var variation = (typeIndex % 3) - 1; // -1, 0, or 1
-        var avgEngineLoad = Math.min(35, Math.max(15, baseLoad + variation));
+        // Calculate average motorbelasting for active records
+        var activeMachines = typeMachines.filter(d => d.power_state !== 'Uit' && d.motorbelasting > 0);
+        var avgMotorbelasting = activeMachines.length > 0
+            ? (activeMachines.reduce((sum, d) => sum + d.motorbelasting, 0) / activeMachines.length * 100).toFixed(0)
+            : 0;
+
+        // Count unique machines of this type
+        var uniqueMachines = [...new Set(typeMachines.map(d => d.machine_id))].length;
 
         typeStats[type] = {
-            operatingHours: operatingHours + 'u',
-            engineLoad: avgEngineLoad + '%'
+            machineCount: uniqueMachines + ' machines',
+            engineLoad: avgMotorbelasting + '%'
         };
-
-        typeIndex++;
     });
 
     // Machine icons (detailed SVG paths) - much larger and more recognizable
@@ -212,14 +217,14 @@ d3.csv("data/sample-data.csv").then(function(data) {
     machineTypes.forEach(function(type, i) {
         var xPos = typeSpacing * (i + 1);
 
-        // Machine icon (much larger, now 28x24 for better visibility)
+        // Machine icon
         var iconPath = machineIcons[type] || 'M2,2 L26,26 M2,26 L26,2';
         svg.append("path")
             .attr("d", iconPath)
-            .attr("transform", "translate(" + (xPos - 14) + "," + (-65) + ")")
+            .attr("transform", "translate(" + (xPos - 10) + "," + (-62) + ") scale(0.75)")
             .attr("class", "machine-icon")
             .attr("stroke", "#8BC34A")
-            .attr("stroke-width", 2.2)
+            .attr("stroke-width", 2)
             .attr("fill", "none")
             .attr("stroke-linecap", "round")
             .attr("stroke-linejoin", "round");
@@ -231,25 +236,18 @@ d3.csv("data/sample-data.csv").then(function(data) {
             .attr("y", -38)
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "middle")
+            .style("font-size", "9px")
             .text(type);
 
-        // Operating hours
+        // Machine count and engine load on one line
         svg.append("text")
             .attr("class", "machine-stat-label")
             .attr("x", xPos)
-            .attr("y", -23)
+            .attr("y", -25)
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "middle")
-            .text(typeStats[type].operatingHours + ' draaiuur');
-
-        // Engine load
-        svg.append("text")
-            .attr("class", "machine-stat-label")
-            .attr("x", xPos)
-            .attr("y", -11)
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .text(typeStats[type].engineLoad + ' motorbelasting');
+            .style("font-size", "8px")
+            .text(typeStats[type].machineCount + " | " + typeStats[type].engineLoad);
     });
 
     // Add labels for power states (y-axis)
@@ -266,9 +264,9 @@ d3.csv("data/sample-data.csv").then(function(data) {
     // Create one node per machine
     nodes = machines.map(function(machineId, i) {
         // Get initial state for this machine
-        var initialData = data.find(d => d.machine_id === machineId && d.timestamp === uniqueTimes[0]);
-        var initialState = initialData ? initialData.power_state : 'off';
-        var machineType = initialData ? initialData.machine_type : 'Graafmachine';
+        var initialData = data.find(d => d.device_id === machineId);
+        var initialState = initialData ? initialData.belasting_categorie : 'Uit';
+        var machineType = initialData ? initialData.MachineCategorie : machineTypes[0];
 
         // Get the focus point for this machine type and state
         var focusKey = machineType + "_" + initialState;
@@ -289,7 +287,7 @@ d3.csv("data/sample-data.csv").then(function(data) {
             radius: node_radius,
             choice: focusKey,
             power_state: initialState,
-            nitrogen_emission: initialData ? +initialData.nitrogen_emission : 0
+            nitrogen_emission: initialData ? +initialData.NOx_mass_flow_kg || 0 : 0
         };
     });
 
@@ -362,9 +360,15 @@ function initializeControls() {
 // Update time display
 function updateTimeDisplay() {
     if (uniqueTimes[currentTimeIndex]) {
+        // Parse timestamp and format nicely (e.g., "14 Jan 06:30")
         var timestamp = uniqueTimes[currentTimeIndex];
-        var time = timestamp.split('T')[1].substring(0, 5); // Extract HH:MM
-        d3.select("#current-time").text(time);
+        var date = new Date(timestamp);
+        var day = date.getDate();
+        var months = ['Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+        var month = months[date.getMonth()];
+        var hours = String(date.getHours()).padStart(2, '0');
+        var minutes = String(date.getMinutes()).padStart(2, '0');
+        d3.select("#current-time").text(day + " " + month + " " + hours + ":" + minutes);
     }
 }
 
@@ -387,7 +391,7 @@ function startAnimation() {
         nodes.forEach(function(node) {
             var dataPoint = machineData.find(d =>
                 d.machine_id === node.machine_id &&
-                d.timestamp === currentTime
+                d.time_interval === currentTime
             );
 
             if (dataPoint) {

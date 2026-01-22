@@ -1,91 +1,83 @@
-# MWB Bubble Chart - Equipment Data Analysis
+# MWB Bubble Chart - Bouwmachines Visualisatie
 
-This project analyzes equipment operational data including NOx emissions, fuel consumption, and CO2 metrics.
+Interactieve bubble chart visualisatie van bouwmachines activiteit en NOx-uitstoot gedurende een werkdag.
 
-## Setup
+## Live Visualisatie
 
-### Virtual Environment
-
-A Python virtual environment has been created for this project with all necessary dependencies.
-
-**Activate the virtual environment:**
+Open `index.html` in een browser (via een lokale server) om de animated bubble chart te bekijken.
 
 ```bash
-source venv/bin/activate
+python3 -m http.server 8080
+# Open http://localhost:8080
 ```
 
-**Deactivate when done:**
+## Wat doet de visualisatie?
 
-```bash
-deactivate
-```
+De bubble chart toont 84 bouwmachines die gedurende een werkdag (02:00 - 22:00) bewegen tussen vier toestanden:
+- **Hoge belasting** - Werkend met motorbelasting >= 25%
+- **Lage belasting** - Werkend met motorbelasting < 25%
+- **Stationair** - Motor draait, machine staat stil
+- **Uit** - Machine is uitgeschakeld
 
-### Installed Packages
+De kleur van elke bubble geeft de NOx-uitstoot weer (grijs = geen, geel→rood = laag→hoog).
 
-- pandas >= 2.0.0 - Data manipulation and analysis
-- numpy >= 1.24.0 - Numerical computing
-- plotly >= 5.14.0 - Interactive visualizations
-- jupyter >= 1.0.0 - Jupyter notebook support
-- notebook >= 6.5.0 - Notebook interface
-- ipykernel >= 6.21.0 - IPython kernel for Jupyter
-- kaleido >= 0.2.1 - Static image export for Plotly
-
-## Running the Analysis
-
-1. Activate the virtual environment:
-   ```bash
-   source venv/bin/activate
-   ```
-
-2. Start Jupyter Notebook:
-   ```bash
-   jupyter notebook
-   ```
-
-3. Open [analysis.ipynb](analysis.ipynb) in the browser that opens
-
-4. Run the cells to perform the analysis
-
-## Project Structure
+## Bestanden
 
 ```
 MWB bubble chart/
-├── venv/                    # Virtual environment (do not commit)
-├── Exploratory/            # Data files
-│   └── untitled - 2025-11-18T141129.591.csv
-├── analysis.ipynb          # Main analysis notebook
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
+├── index.html                      # Hoofdvisualisatie (D3.js)
+├── src/style.css                   # Styling
+├── prepare_bubble_data.py          # Data preparation script
+├── data/
+│   ├── NOx_intervals - *.csv       # Brondata (10-min intervallen)
+│   └── NOx_intervals_with_belasting.csv  # Verwerkte data
+├── data_exploration_v2.ipynb       # Data analyse notebook
+└── reference/                      # Tutorial en voorbeelden
 ```
 
-## Data Overview
+## Data Preparation
 
-The dataset contains equipment operational metrics including:
-- Equipment identification and classification
-- NOx and CO2 emissions
-- Fuel consumption from multiple sources (FF, CANBUS, NOxMAF)
-- Engine load and power metrics
-- Operational duration
-- Pilot program information
+Het script `prepare_bubble_data.py` transformeert de brondata:
 
-## Analysis Sections
+1. **Belasting categorieën** - Bepaalt machine status op basis van:
+   - `machine_staat` (Uit/Stationair/Werkend)
+   - `motorbelasting` (drempel: 25%)
 
-The notebook includes 15 comprehensive analysis sections:
+2. **Machine categorieën** - Groepeert 19 machine types naar 11 categorieën:
+   | Categorie | Bevat |
+   |-----------|-------|
+   | Rupsgraafmachine | Hydraulische rupsgraafmachine |
+   | Mobiele graafmachine | Mobiele graafmachine |
+   | Lader | Lader |
+   | Asfaltverwerking | Asfaltverwerking |
+   | Asfaltverdichting | Asfaltverdichting |
+   | Hijskraan | Mobiele/Rups/Vaste hijskraan |
+   | Generator | Generatoren |
+   | Grondverzet | Bulldozer, Dumper, Grondwals |
+   | Heistelling | Heistelling, Heischip |
+   | Tractor | Tractor, Werktuigdrager, Maaier |
+   | Overig | Betonverwerking, Markeeringsmachine, Testopstelling |
 
-1. Data Loading & Exploration
-2. Equipment Overview
-3. NOx Emissions Analysis
-4. Fuel Consumption Analysis
-5. Engine Load Analysis
-6. CO2 Emissions Analysis
-7. Operational Duration Analysis
-8. Engine Classification Comparison
-9. Pilot Program Comparison
-10. Correlation Analysis
-11. Summary Statistics by Equipment Type
-12. Time-based Analysis
-13. Equipment Efficiency Analysis
-14. Load Type Analysis
-15. Key Insights & Conclusions
+3. **Representatieve dag** - Combineert data van meerdere dagen tot één geanimeerde dag (alle machines tegelijk zichtbaar)
 
-All visualizations are created using Plotly for interactive exploration.
+### Data opnieuw genereren
+
+```bash
+python3 prepare_bubble_data.py
+```
+
+## Data Analyse
+
+Open `data_exploration_v2.ipynb` voor:
+- Overzicht machines per categorie
+- Data coverage per machine
+- Status patronen over tijd
+- Motorbelasting over tijd
+- Dagpatronen (per uur)
+- NOx uitstoot over tijd
+
+## Technologie
+
+- **D3.js v7** - Visualisatie en animatie
+- **Python/Pandas** - Data preparation
+- **Jupyter** - Data exploratie
