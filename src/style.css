@@ -1,0 +1,291 @@
+/* Reset */
+html, body, div, span, h1, h2, h3, p {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+}
+
+body {
+    line-height: 1;
+    background: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Layout */
+#main-wrapper {
+    width: 1600px;
+    margin: 40px auto;
+    background: white;
+    padding: 40px;
+    border-radius: 0;
+    box-shadow: 0 0 20px rgba(0,0,0,0.08);
+}
+
+header {
+    text-align: left;
+    margin-bottom: 35px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid #8BC34A;
+}
+
+h1 {
+    font-size: 32px;
+    font-weight: 400;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: #666;
+    font-weight: 300;
+    line-height: 1.6;
+}
+
+/* Controls */
+#controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+    margin-bottom: 30px;
+    padding: 20px 0;
+    background: transparent;
+    border: none;
+}
+
+#time-display {
+    font-size: 18px;
+    font-weight: 400;
+    color: #2c3e50;
+}
+
+.time-label {
+    color: #666;
+    margin-right: 8px;
+    font-weight: 300;
+}
+
+#current-time {
+    color: #8BC34A;
+    font-size: 28px;
+    font-weight: 600;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+
+#speed-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#speed-control label {
+    font-size: 14px;
+    color: #495057;
+    font-weight: 500;
+}
+
+#speed-slider {
+    width: 150px;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #d3d3d3;
+    outline: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #8BC34A;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+#speed-slider::-webkit-slider-thumb:hover {
+    background: #7CB342;
+}
+
+#speed-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #8BC34A;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+    transition: background 0.2s;
+}
+
+#speed-slider::-moz-range-thumb:hover {
+    background: #7CB342;
+}
+
+#speed-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+    min-width: 40px;
+}
+
+#play-pause-btn {
+    padding: 10px 28px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    background: #8BC34A;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#play-pause-btn:hover {
+    background: #7CB342;
+}
+
+#play-pause-btn:active {
+    transform: translateY(1px);
+    background: #689F38;
+}
+
+/* Legend */
+#legend {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 30px;
+    padding: 20px 0;
+    background: transparent;
+    border: none;
+}
+
+.legend-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.legend-gradient {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 500px;
+}
+
+.gradient-bar {
+    height: 20px;
+    background: linear-gradient(to right,
+        #999999 0%,
+        #999999 5%,
+        rgb(255, 255, 204) 10%,
+        rgb(255, 237, 160) 20%,
+        rgb(254, 217, 118) 30%,
+        rgb(254, 178, 76) 40%,
+        rgb(253, 141, 60) 50%,
+        rgb(252, 78, 42) 60%,
+        rgb(227, 26, 28) 70%,
+        rgb(189, 0, 38) 80%,
+        rgb(128, 0, 38) 100%);
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.gradient-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #666;
+}
+
+/* Chart */
+#chart {
+    position: relative;
+}
+
+/* Tooltip */
+.tooltip {
+    position: absolute;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    border-radius: 4px;
+    font-size: 13px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1000;
+    line-height: 1.4;
+}
+
+.tooltip.visible {
+    opacity: 1;
+}
+
+/* Axis styles */
+.axis text {
+    font-size: 11px;
+    fill: #666;
+}
+
+.axis path,
+.axis line {
+    stroke: #ddd;
+    shape-rendering: crispEdges;
+}
+
+.machine-icon {
+    transition: stroke 0.2s;
+}
+
+.machine-icon:hover {
+    stroke: #689F38;
+    stroke-width: 2;
+}
+
+.machine-type-label {
+    font-size: 11px;
+    font-weight: 600;
+    fill: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.machine-stat-label {
+    font-size: 9px;
+    font-weight: 400;
+    fill: #666;
+}
+
+.power-state-label {
+    font-size: 13px;
+    font-weight: 500;
+    fill: #2c3e50;
+}
+
+/* Bubbles */
+.bubble {
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 1.5px;
+    cursor: pointer;
+}
+
+.bubble:hover {
+    stroke: rgba(0, 0, 0, 0.3);
+    stroke-width: 2px;
+}

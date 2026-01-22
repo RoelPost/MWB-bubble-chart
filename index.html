@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>MWB Bouwmachines - Activiteit Visualisatie</title>
+    <link rel="stylesheet" href="src/style.css" type="text/css" media="screen" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
+<div id="main-wrapper">
+    <header>
+        <h1>Bouwmachines Werkdag Analyse</h1>
+        <p class="subtitle">Visualisatie van vermogensstadia gedurende 24 uur</p>
+    </header>
+
+    <div id="controls">
+        <div id="time-display">
+            <span class="time-label">Tijd:</span>
+            <span id="current-time">06:00</span>
+        </div>
+
+        <div id="speed-control">
+            <label for="speed-slider">Snelheid:</label>
+            <input type="range" id="speed-slider" min="100" max="2000" value="1000" step="100">
+            <span id="speed-label">1x</span>
+        </div>
+
+        <button id="play-pause-btn">Pause</button>
+    </div>
+
+    <div id="chart"></div>
+
+    <div id="legend">
+        <div class="legend-title">Stikstofuitstoot (kg/uur)</div>
+        <div class="legend-gradient">
+            <div class="gradient-bar"></div>
+            <div class="gradient-labels">
+                <span>0</span>
+                <span>2.5</span>
+                <span>5</span>
+                <span>7.5</span>
+                <span>10+</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip"></div>
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<script>
+// Configuration (based on tutorial)
+var margin = {top: 115, right: 40, bottom: 60, left: 100},
+    width = 1600 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+var node_radius = 5,
+    padding = 1,
+    cluster_padding = 4,
+    num_nodes = 150;
+
+// Color scale for nitrogen emissions (0 to ~11)
+// Custom scale: grey for 0, then yellow-orange-red for 1-11
+var colorScale = function(value) {
+    if (value === 0) {
+        return "#999999"; // Grey for off/no emissions
+    }
+    // Yellow-Orange-Red scale for actual emissions
+    var scale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0.5, 11]);
+    return scale(value);
+};
+
+var svg = d3.select("#chart").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// Power states and their y positions
+var powerStates = {
+    "high": { y: height * 0.15, color: "#D0021B", label: "Hoog vermogen" },
+    "low": { y: height * 0.38, color: "#F5A623", label: "Laag vermogen" },
+    "idle": { y: height * 0.62, color: "#4A90E2", label: "Idle" },
+    "off": { y: height * 0.85, color: "#999999", label: "Uitgeschakeld" }
+};
+
+// Machine types and foci will be set after loading data
+var machineTypes = [];
+var foci = {};
+
+// Global variables
+var nodes = [];
+var circle;
+var simulation;
+var machineData = [];
+var currentTimeIndex = 0;
+var uniqueTimes = [];
+var animationInterval;
+var isPlaying = true;
+var animationSpeed = 1000; // milliseconds per update
+
+// Load CSV data
+d3.csv("data/sample-data.csv").then(function(data) {
+    // Parse the data and convert emissions to numbers
+    machineData = data.map(function(d) {
+        return {
+            machine_id: d.machine_id,
+            machine_type: d.machine_type,
+            timestamp: d.timestamp,
+            power_state: d.power_state,
+            nitrogen_emission: +d.nitrogen_emission // Convert to number
+        };
+    });
+
+    // Get unique timestamps
+    uniqueTimes = [...new Set(data.map(d => d.timestamp))].sort();
+
+    // Get unique machines
+    var machines = [...new Set(data.map(d => d.machine_id))];
+
+    // Get unique machine types from data
+    machineTypes = [...new Set(data.map(d => d.machine_type))].sort();
+    var numTypes = machineTypes.length;
+    var typeSpacing = width / (numTypes + 1);
+
+    // Create foci combining machine types and power states
+    machineTypes.forEach(function(type, i) {
+        var xPos = typeSpacing * (i + 1);
+        Object.keys(powerStates).forEach(function(state) {
+            var key = type + "_" + state;
+            foci[key] = {
+                x: xPos,
+                y: powerStates[state].y,
+                color: powerStates[state].color,
+                machineType: type,
+                powerState: state
+            };
+        });
+    });
+
+    // Calculate statistics for each machine type
+    var typeStats = {};
+    var typeIndex = 0;
+    machineTypes.forEach(function(type) {
+        var typeMachines = machineData.filter(d => d.machine_type === type);
+        var totalMinutes = typeMachines.length;
+
+        // Calculate actual operating hours (convert minutes to hours, around 5 hours average)
+        var activeMinutes = typeMachines.filter(d => d.power_state !== 'off').length;
+        var operatingHours = (activeMinutes / 60).toFixed(1); // Convert to hours
+
+        // Generate semi-random but consistent engine load between 15-35%
+        // Use type index to make it consistent but varied
+        var baseLoad = 15 + (typeIndex % 20); // 15-34
+        var variation = (typeIndex % 3) - 1; // -1, 0, or 1
+        var avgEngineLoad = Math.min(35, Math.max(15, baseLoad + variation));
+
+        typeStats[type] = {
+            operatingHours: operatingHours + 'u',
+            engineLoad: avgEngineLoad + '%'
+        };
+
+        typeIndex++;
+    });
+
+    // Machine icons (detailed SVG paths) - much larger and more recognizable
+    var machineIcons = {
+        // Asphalt machine with roller
+        'Asfalteermachine': 'M2,18 L26,18 M14,18 L14,4 M9,4 L19,4 M19,4 L19,6 M9,4 L9,6 M4,18 C4,20 6,20 6,18 M24,18 C24,20 22,20 22,18',
+
+        // Concrete mixer with rotating drum
+        'Betonmixer': 'M14,3 L17,12 L23,12 L23,18 L5,18 L5,12 L11,12 Z M9,18 L9,21 M19,18 L19,21 M7,18 L21,18',
+
+        // Bulldozer with blade and tracks
+        'Bulldozer': 'M3,13 L6,9 L10,9 L10,6 L12,6 L14,9 L20,9 L23,13 L23,17 L3,17 Z M6,17 L6,19 M10,17 L10,19 M16,17 L16,19 M20,17 L20,19 M1,13 L6,13',
+
+        // Dump truck with tipper
+        'Dumper': 'M3,11 L3,17 L23,17 L23,11 L20,6 L10,6 Z M7,17 L7,20 M19,17 L19,20 M10,6 L10,4 L20,4 L20,6',
+
+        // Excavator with arm and bucket
+        'Graafmachine': 'M3,14 L7,10 L12,10 L16,14 L20,18 L23,18 M7,10 L7,4 M7,4 L9,4 M16,14 L19,14 L21,16 M5,14 L5,17 L9,17 L9,14',
+
+        // Mobile crane with hook
+        'Hijskraan': 'M14,2 L14,18 M4,5 L24,5 M20,5 L20,10 L22,12 L22,15 M8,18 L20,18',
+
+        // Crane with outriggers
+        'Kraan': 'M14,3 L14,15 M6,6 L22,6 M18,6 L18,10 L22,10 M6,15 L22,15 M6,15 L6,17 M22,15 L22,17',
+
+        // Mini excavator (smaller version)
+        'Minigraver': 'M6,14 L9,11 L13,11 L16,14 L19,17 L21,17 M9,11 L9,6 M15,14 L17,14 L18,15 M7,14 L7,16 L10,16 L10,14',
+
+        // Mobile crane on truck
+        'Mobiele kraan': 'M3,15 L23,15 M14,3 L14,15 M5,7 L23,7 M6,15 L6,18 M20,15 L20,18 M18,7 L18,12',
+
+        // Front loader/shovel
+        'Shovel': 'M20,18 L16,14 L16,10 L10,4 M16,14 L20,14 L22,16 M8,18 L8,20 M18,18 L18,20 M6,18 L22,18',
+
+        // Tower crane
+        'Torenkraan': 'M14,2 L14,18 M3,5 L25,5 M22,5 L22,14 L25,16 M5,5 L5,8 L3,9',
+
+        // Vibrating plate compactor
+        'Trilplaat': 'M4,12 L24,12 M8,12 L8,16 M20,12 L20,16 M4,16 L24,16 M10,8 L10,12 M18,8 L18,12 M12,6 L12,8 M16,6 L16,8',
+
+        // Wheel loader with big bucket
+        'Wiellader': 'M7,11 L11,7 L17,7 L21,11 L21,16 L7,16 Z M9,16 L9,19 M19,16 L19,19 M14,7 L14,4 L17,4 M11,7 L11,9 L17,9 L17,7'
+    };
+
+    // Add labels and icons for machine types (x-axis)
+    machineTypes.forEach(function(type, i) {
+        var xPos = typeSpacing * (i + 1);
+
+        // Machine icon (much larger, now 28x24 for better visibility)
+        var iconPath = machineIcons[type] || 'M2,2 L26,26 M2,26 L26,2';
+        svg.append("path")
+            .attr("d", iconPath)
+            .attr("transform", "translate(" + (xPos - 14) + "," + (-65) + ")")
+            .attr("class", "machine-icon")
+            .attr("stroke", "#8BC34A")
+            .attr("stroke-width", 2.2)
+            .attr("fill", "none")
+            .attr("stroke-linecap", "round")
+            .attr("stroke-linejoin", "round");
+
+        // Machine type name
+        svg.append("text")
+            .attr("class", "machine-type-label")
+            .attr("x", xPos)
+            .attr("y", -38)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text(type);
+
+        // Operating hours
+        svg.append("text")
+            .attr("class", "machine-stat-label")
+            .attr("x", xPos)
+            .attr("y", -23)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text(typeStats[type].operatingHours + ' draaiuur');
+
+        // Engine load
+        svg.append("text")
+            .attr("class", "machine-stat-label")
+            .attr("x", xPos)
+            .attr("y", -11)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .text(typeStats[type].engineLoad + ' motorbelasting');
+    });
+
+    // Add labels for power states (y-axis)
+    Object.keys(powerStates).forEach(function(key) {
+        svg.append("text")
+            .attr("class", "power-state-label")
+            .attr("x", -5)
+            .attr("y", powerStates[key].y)
+            .attr("text-anchor", "end")
+            .attr("dominant-baseline", "middle")
+            .text(powerStates[key].label);
+    });
+
+    // Create one node per machine
+    nodes = machines.map(function(machineId, i) {
+        // Get initial state for this machine
+        var initialData = data.find(d => d.machine_id === machineId && d.timestamp === uniqueTimes[0]);
+        var initialState = initialData ? initialData.power_state : 'off';
+        var machineType = initialData ? initialData.machine_type : 'Graafmachine';
+
+        // Get the focus point for this machine type and state
+        var focusKey = machineType + "_" + initialState;
+        var focus = foci[focusKey];
+
+        // Fallback if focus not found
+        if (!focus) {
+            var firstType = machineTypes[0];
+            focus = foci[firstType + "_" + initialState] || { x: width/2, y: height/2 };
+        }
+
+        return {
+            id: machineId,
+            machine_id: machineId,
+            machine_type: machineType,
+            x: focus.x + Math.random(),
+            y: focus.y + Math.random(),
+            radius: node_radius,
+            choice: focusKey,
+            power_state: initialState,
+            nitrogen_emission: initialData ? +initialData.nitrogen_emission : 0
+        };
+    });
+
+    // Force simulation (D3 v7 syntax)
+    simulation = d3.forceSimulation(nodes)
+        .force("charge", d3.forceManyBody().strength(0))
+        .velocityDecay(0.09)
+        .on("tick", tick);
+
+    // Draw circles for each node
+    circle = svg.selectAll("circle")
+        .data(nodes)
+      .enter().append("circle")
+        .attr("id", function(d) { return d.id; })
+        .attr("class", "bubble")
+        .style("fill", function(d) {
+            return colorScale(d.nitrogen_emission);
+        });
+
+    // Smooth initial transition
+    circle.transition()
+        .duration(900)
+        .delay(function(d,i) { return i * 5; })
+        .attrTween("r", function(d) {
+            var i = d3.interpolate(0, d.radius);
+            return function(t) { return d.radius = i(t); };
+        });
+
+    // Initialize controls
+    initializeControls();
+
+    // Start the animation after initial transition
+    setTimeout(function() {
+        startAnimation();
+    }, 1000);
+});
+
+// Initialize control handlers
+function initializeControls() {
+    // Play/Pause button
+    d3.select("#play-pause-btn").on("click", function() {
+        if (isPlaying) {
+            pauseAnimation();
+            d3.select(this).text("Play");
+        } else {
+            startAnimation();
+            d3.select(this).text("Pause");
+        }
+        isPlaying = !isPlaying;
+    });
+
+    // Speed slider
+    d3.select("#speed-slider").on("input", function() {
+        var sliderValue = +this.value;
+        // Invert the slider so higher values = faster
+        animationSpeed = 2100 - sliderValue;
+
+        // Update speed label
+        var speedMultiplier = (1000 / animationSpeed).toFixed(1);
+        d3.select("#speed-label").text(speedMultiplier + "x");
+
+        // Restart animation with new speed if playing
+        if (isPlaying) {
+            pauseAnimation();
+            startAnimation();
+        }
+    });
+}
+
+// Update time display
+function updateTimeDisplay() {
+    if (uniqueTimes[currentTimeIndex]) {
+        var timestamp = uniqueTimes[currentTimeIndex];
+        var time = timestamp.split('T')[1].substring(0, 5); // Extract HH:MM
+        d3.select("#current-time").text(time);
+    }
+}
+
+// Animation function that steps through time
+function startAnimation() {
+    animationInterval = setInterval(function() {
+        currentTimeIndex++;
+
+        // Loop back to start
+        if (currentTimeIndex >= uniqueTimes.length) {
+            currentTimeIndex = 0;
+        }
+
+        var currentTime = uniqueTimes[currentTimeIndex];
+
+        // Update time display
+        updateTimeDisplay();
+
+        // Update each node based on data at current time
+        nodes.forEach(function(node) {
+            var dataPoint = machineData.find(d =>
+                d.machine_id === node.machine_id &&
+                d.timestamp === currentTime
+            );
+
+            if (dataPoint) {
+                var newState = dataPoint.power_state;
+                var focusKey = node.machine_type + "_" + newState;
+
+                node.choice = focusKey;
+                node.power_state = newState;
+                node.nitrogen_emission = +dataPoint.nitrogen_emission;
+            }
+        });
+
+        simulation.alpha(0.3).restart();
+
+    }, animationSpeed);
+}
+
+// Pause animation
+function pauseAnimation() {
+    if (animationInterval) {
+        clearInterval(animationInterval);
+        animationInterval = null;
+    }
+}
+
+// Update positions on each tick
+function tick() {
+    circle
+        .each(gravity(0.051))
+        .each(collide(0.5))
+        .style("fill", function(d) {
+            return colorScale(d.nitrogen_emission);
+        })
+        .attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
+}
+
+// Move nodes toward cluster focus (from tutorial)
+function gravity(alpha) {
+    return function(d) {
+        var focus = foci[d.choice];
+        if (focus) {
+            d.y += (focus.y - d.y) * alpha;
+            d.x += (focus.x - d.x) * alpha;
+        }
+    };
+}
+
+// Resolve collisions between nodes (from tutorial)
+function collide(alpha) {
+    var quadtree = d3.quadtree()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; })
+        .addAll(nodes);
+
+    return function(d) {
+        var r = d.radius + node_radius + Math.max(padding, cluster_padding),
+            nx1 = d.x - r,
+            nx2 = d.x + r,
+            ny1 = d.y - r,
+            ny2 = d.y + r;
+
+        quadtree.visit(function(quad, x1, y1, x2, y2) {
+            if (quad.data && (quad.data !== d)) {
+                var x = d.x - quad.data.x,
+                    y = d.y - quad.data.y,
+                    l = Math.sqrt(x * x + y * y),
+                    r = d.radius + quad.data.radius + (d.choice === quad.data.choice ? padding : cluster_padding);
+                if (l < r) {
+                    l = (l - r) / l * alpha;
+                    d.x -= x *= l;
+                    d.y -= y *= l;
+                    quad.data.x += x;
+                    quad.data.y += y;
+                }
+            }
+            return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+        });
+    };
+}
+
+</script>
+
+</body>
+</html>
