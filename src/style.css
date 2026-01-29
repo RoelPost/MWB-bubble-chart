@@ -49,13 +49,30 @@ h1 {
 /* Controls */
 #controls {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 0;
+    margin-bottom: 20px;
+    padding: 0;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    max-width: 1400px;
+}
+
+#controls-left {
+    display: flex;
     align-items: center;
-    gap: 40px;
-    margin-bottom: 30px;
-    padding: 20px 0;
-    background: transparent;
-    border: none;
+    gap: 20px;
+    padding: 14px 24px;
+}
+
+#controls-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 24px;
+    border-left: 1px solid #ddd;
 }
 
 #time-display {
@@ -72,7 +89,7 @@ h1 {
 
 #current-time {
     color: #8BC34A;
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 600;
     font-family: 'Segoe UI', Tahoma, sans-serif;
 }
@@ -90,7 +107,7 @@ h1 {
 }
 
 #speed-slider {
-    width: 150px;
+    width: 120px;
     height: 6px;
     -webkit-appearance: none;
     appearance: none;
@@ -137,13 +154,13 @@ h1 {
 }
 
 #play-pause-btn {
-    padding: 10px 28px;
-    font-size: 14px;
+    padding: 8px 20px;
+    font-size: 13px;
     font-weight: 500;
     color: white;
     background: #8BC34A;
     border: none;
-    border-radius: 0;
+    border-radius: 3px;
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: none;
@@ -160,36 +177,61 @@ h1 {
     background: #689F38;
 }
 
+/* Color Mode Control */
+#color-mode-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#color-mode-control label {
+    font-size: 13px;
+    color: #495057;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+#color-mode-select {
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid #8BC34A;
+    border-radius: 3px;
+    background: white;
+    color: #2c3e50;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+#color-mode-select:hover {
+    border-color: #7CB342;
+}
+
+#color-mode-select:focus {
+    outline: none;
+    border-color: #689F38;
+    box-shadow: 0 0 0 2px rgba(139, 195, 74, 0.2);
+}
+
 /* Legend */
 #legend {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    margin-top: 30px;
-    padding: 20px 0;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 0;
     background: transparent;
     border: none;
-}
-
-.legend-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #2c3e50;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .legend-gradient {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    max-width: 500px;
+    gap: 3px;
+    width: 180px;
 }
 
 .gradient-bar {
-    height: 20px;
+    height: 14px;
     background: linear-gradient(to right,
         #999999 0%,
         #999999 5%,
@@ -202,14 +244,67 @@ h1 {
         rgb(227, 26, 28) 70%,
         rgb(189, 0, 38) 80%,
         rgb(128, 0, 38) 100%);
-    border-radius: 4px;
+    border-radius: 3px;
     border: 1px solid #ddd;
+}
+
+/* Special gradient for verschil t.o.v. AUB6 (green for better, red for worse) */
+.gradient-bar.verschil-gradient {
+    background: linear-gradient(to right,
+        rgb(49, 163, 84) 0%,
+        rgb(116, 196, 118) 15%,
+        rgb(186, 228, 179) 25%,
+        rgb(255, 255, 204) 35%,
+        rgb(254, 217, 118) 50%,
+        rgb(253, 141, 60) 65%,
+        rgb(252, 78, 42) 75%,
+        rgb(227, 26, 28) 85%,
+        rgb(189, 0, 38) 100%);
 }
 
 .gradient-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: 10px;
+    color: #666;
+}
+
+/* Power Legend */
+#power-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 16px;
+    border-left: 1px solid #ddd;
+}
+
+.power-legend-label {
+    font-size: 11px;
+    color: #666;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.power-legend-bubbles {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.power-bubble-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.power-bubble-item svg circle {
+    stroke: #888;
+    stroke-width: 0.5;
+}
+
+.power-bubble-item span {
+    font-size: 9px;
     color: #666;
 }
 
@@ -276,6 +371,22 @@ h1 {
     font-size: 13px;
     font-weight: 500;
     fill: #2c3e50;
+}
+
+.state-percentage {
+    font-size: 10px;
+    font-weight: 500;
+    fill: #888;
+    transition: fill 0.3s;
+}
+
+.nox-stat-label {
+    font-size: 10px;
+    transition: fill 0.3s;
+}
+
+.nox-absolute {
+    font-weight: 600;
 }
 
 /* Bubbles */

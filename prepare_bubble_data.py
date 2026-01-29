@@ -2,108 +2,200 @@
 Data Preparation for MWB Bubble Chart
 =====================================
 
-Dit script bereidt de NOx interval data voor voor de bubble chart visualisatie.
+This script prepares the NOx interval data for the bubble chart visualization.
+All data transformations happen here - the JavaScript only visualizes.
 
-Transformaties:
-1. Belasting categorie: Combineert machine_staat en motorbelasting tot 4 categorieën:
+Input:  data/aggregated_device_intervallen_20260122_143706.csv
+Output: data/aggregated_device_intervallen_20260122_143706.csv (updated in place)
+
+Transformations Applied:
+------------------------
+
+1. power_state - Combines machine_staat and motorbelasting into 4 categories:
    - Uit: machine staat uit
    - Stationair: machine staat stationair
    - Lage belasting: werkend met motorbelasting < 25%
    - Hoge belasting: werkend met motorbelasting >= 25%
 
-2. Machine categorieën: Groepeert 19 machine types naar 11 categorieën:
-   - Graafmachines blijven apart (Rupsgraafmachine, Mobiele graafmachine)
-   - Asfaltmachines blijven apart (Asfaltverwerking, Asfaltverdichting)
-   - Hijskranen gecombineerd (Mobiele/Rups/Vaste hijskraan)
-   - Grondverzet gecombineerd (Bulldozer, Dumper, Grondwals)
-   - Heistelling gecombineerd (Heistelling, Heischip)
-   - Tractor gecombineerd (Tractor, Werktuigdrager, Maaier)
-   - Overig (Betonverwerking, Markeeringsmachine, Testopstelling)
+2. machine_type - Groups 17 detailed machine types into 11 categories:
+   - Graafmachines (Rupsgraafmachine, Mobiele graafmachine)
+   - Lader
+   - Asfaltmachines (Asfaltverwerking, Asfaltverdichting)
+   - Hijskraan (Mobiele/Rups/Vaste)
+   - Generator
+   - Grondverzet (Bulldozer, Grondwals)
+   - Heistelling (Heistelling, Heischip)
+   - Tractor (Tractor, Werktuigdrager, Maaier)
+   - Overig (Dumper, Betonverwerking, Markeeringsmachine, Testopstelling)
 
-3. Representatieve dag: De brondata bevat machines verspreid over meerdere dagen.
-   Om alle 84 machines tegelijk te tonen, worden alle timestamps omgezet naar
-   één referentiedag (14 Jan). Zo toont de animatie een "typische werkdag".
+3. nox_gram_per_hour - NOx emissions rate in grams per hour:
+   Formula: NOx_mass_flow_kg * 1000 * 6
+   - Multiply by 1000 to convert kg to grams
+   - Multiply by 6 because data is per 10-minute interval (60/10 = 6)
 
-Input:  data/NOx_intervals - 2026-01-22T101313.540.csv
-Output: data/NOx_intervals_with_belasting.csv
+4. nox_gram_per_liter - NOx emissions per liter of fuel consumed:
+   Formula: (NOx_mass_flow_kg * 1000) / fuel_mass_flow_liter
+   - Returns 0 when fuel_mass_flow_liter is 0 to avoid division by zero
 """
 
 import pandas as pd
 
-# Load the data
-df = pd.read_csv('data/NOx_intervals - 2026-01-22T101313.540.csv')
+# Configuration
+INPUT_FILE = 'data/aggregated_device_intervallen_20260122_143706.csv'
+OUTPUT_FILE = 'data/aggregated_device_intervallen_20260122_143706.csv'
 
-# Convert time_interval to datetime
-df['time_interval'] = pd.to_datetime(df['time_interval'])
+# Threshold for high/low load classification (25%)
+LOAD_THRESHOLD = 0.25
 
-# Create a "representative day" by extracting just the time component
-# All machines will be mapped to the same reference date (2026-01-14)
-# This combines data from multiple days into one animated day view
-df['time_only'] = df['time_interval'].dt.strftime('%H:%M:%S')
-df['time_interval'] = pd.to_datetime('2026-01-14 ' + df['time_only'])
-df = df.drop(columns=['time_only'])
-
-# Create the new combined column based on machine_staat and motorbelasting
-def get_belasting_category(row):
-    if row['machine_staat'] == 'Uit':
-        return 'Uit'
-    elif row['machine_staat'] == 'Stationair':
-        return 'Stationair'
-    else:  # Werkend
-        if row['motorbelasting'] < 0.25:
-            return 'Lage belasting'
-        else:
-            return 'Hoge belasting'
-
-df['belasting_categorie'] = df.apply(get_belasting_category, axis=1)
-
-# Combine machine types into broader categories
-machine_type_mapping = {
-    # Graafmachines - blijven los
+# Machine type mapping: detailed MainGroupLabel -> aggregated category
+MACHINE_TYPE_MAPPING = {
+    # Graafmachines - separate categories
     'Hydraulische rupsgraafmachine': 'Rupsgraafmachine',
     'Mobiele graafmachine': 'Mobiele graafmachine',
-    # Laders
+
+    # Lader
     'Lader': 'Lader',
-    # Asfaltmachines - blijven los
+
+    # Asfaltmachines - separate categories
     'Asfaltverwerking': 'Asfaltverwerking',
     'Asfaltverdichting': 'Asfaltverdichting',
-    # Hijskranen - combineren
+
+    # Hijskranen - combined
     'Mobiele hijskraan': 'Hijskraan',
     'Rupshijskraan': 'Hijskraan',
     'Vaste hijskraan': 'Hijskraan',
-    # Generatoren
+
+    # Generator
     'Generatoren': 'Generator',
-    # Grondverzet - combineren
+
+    # Grondverzet - combined
     'Bulldozer': 'Grondverzet',
-    'Dumper': 'Grondverzet',
     'Grondwals': 'Grondverzet',
-    # Heistelling + Heischip - combineren
+
+    # Heistelling - combined
     'Heistelling': 'Heistelling',
     'Heischip': 'Heistelling',
-    # Tractor + Werktuigdrager + Maaier - combineren
+
+    # Tractor - combined
     'Tractor': 'Tractor',
     'Werktuigdrager': 'Tractor',
     'Maaier': 'Tractor',
-    # Overig - combineren
+
+    # Overig - catch-all
+    'Dumper': 'Overig',
     'Betonverwerking': 'Overig',
     'Markeeringsmachine': 'Overig',
     'Testopstelling': 'Overig',
 }
 
-df['MachineCategorie'] = df['MainGroupLabel'].map(machine_type_mapping)
 
-# Show distribution of new categories
-print("Distribution of belasting_categorie:")
-print(df['belasting_categorie'].value_counts())
+def get_power_state(row):
+    """
+    Determine power state from machine_staat and motorbelasting.
 
-print("\nDistribution of MachineCategorie:")
-machine_counts = df.groupby('MachineCategorie')['device_id'].nunique().sort_values(ascending=False)
-for cat, count in machine_counts.items():
-    print(f"  {cat}: {count} machines")
-print(f"\nTotal: {df['device_id'].nunique()} machines in {len(machine_counts)} categories")
+    Returns one of: 'Uit', 'Stationair', 'Lage belasting', 'Hoge belasting'
 
-# Save to new CSV
-output_path = 'data/NOx_intervals_with_belasting.csv'
-df.to_csv(output_path, index=False)
-print(f"\nSaved to {output_path}")
-print(f"Total rows: {len(df)}")
+    Threshold: 25% motorbelasting for high vs low load
+    """
+    if row['machine_staat'] == 'Uit':
+        return 'Uit'
+    elif row['machine_staat'] == 'Stationair':
+        return 'Stationair'
+    else:  # Werkend
+        if row['motorbelasting'] >= LOAD_THRESHOLD:
+            return 'Hoge belasting'
+        else:
+            return 'Lage belasting'
+
+
+def get_machine_type(main_group_label):
+    """
+    Map detailed MainGroupLabel to aggregated machine type category.
+
+    Unknown labels are mapped to 'Overig'.
+    """
+    return MACHINE_TYPE_MAPPING.get(main_group_label, 'Overig')
+
+
+def calculate_nox_gram_per_hour(nox_kg):
+    """
+    Calculate NOx emissions in grams per hour.
+
+    Formula: nox_kg * 1000 * 6
+    - * 1000: convert kg to grams
+    - * 6: convert 10-minute interval to hourly rate (60/10)
+    """
+    return nox_kg * 1000 * 6
+
+
+def calculate_nox_gram_per_liter(nox_kg, fuel_liter):
+    """
+    Calculate NOx emissions per liter of fuel consumed.
+
+    Formula: (nox_kg * 1000) / fuel_liter
+    Returns 0 when fuel_liter is 0 to avoid division by zero.
+    """
+    if fuel_liter > 0:
+        return (nox_kg * 1000) / fuel_liter
+    return 0
+
+
+def main():
+    print(f"Loading data from: {INPUT_FILE}")
+    df = pd.read_csv(INPUT_FILE)
+    print(f"Loaded {len(df)} rows")
+
+    # Apply transformations
+    print("\nApplying transformations...")
+
+    # 1. Power state classification
+    print(f"  - power_state (threshold: {LOAD_THRESHOLD*100:.0f}%)")
+    df['power_state'] = df.apply(get_power_state, axis=1)
+
+    # 2. Machine type aggregation
+    print("  - machine_type (11 categories)")
+    df['machine_type'] = df['MainGroupLabel'].apply(get_machine_type)
+
+    # 3. NOx gram per hour
+    print("  - nox_gram_per_hour")
+    df['nox_gram_per_hour'] = df['NOx_mass_flow_kg'].apply(calculate_nox_gram_per_hour)
+
+    # 4. NOx gram per liter
+    print("  - nox_gram_per_liter")
+    df['nox_gram_per_liter'] = df.apply(
+        lambda row: calculate_nox_gram_per_liter(row['NOx_mass_flow_kg'], row['fuel_mass_flow_liter']),
+        axis=1
+    )
+
+    # Print summary statistics
+    print("\n" + "="*50)
+    print("Summary Statistics")
+    print("="*50)
+
+    print("\nPower State Distribution:")
+    for state, count in df['power_state'].value_counts().items():
+        pct = count / len(df) * 100
+        print(f"  {state}: {count:,} ({pct:.1f}%)")
+
+    print("\nMachine Type Distribution:")
+    type_counts = df.groupby('machine_type')['device_id'].nunique().sort_values(ascending=False)
+    for mtype, count in type_counts.items():
+        print(f"  {mtype}: {count} machines")
+    print(f"\nTotal: {df['device_id'].nunique()} unique machines in {len(type_counts)} categories")
+
+    print("\nNOx Statistics:")
+    print(f"  nox_gram_per_hour  - mean: {df['nox_gram_per_hour'].mean():.2f}, max: {df['nox_gram_per_hour'].max():.2f}")
+    print(f"  nox_gram_per_liter - mean: {df['nox_gram_per_liter'].mean():.2f}, max: {df['nox_gram_per_liter'].max():.2f}")
+
+    # Save to output file
+    print(f"\nSaving to: {OUTPUT_FILE}")
+    df.to_csv(OUTPUT_FILE, index=False)
+    print(f"Done! Output has {len(df.columns)} columns")
+
+    # Show new columns added
+    new_cols = ['power_state', 'machine_type', 'nox_gram_per_hour', 'nox_gram_per_liter']
+    print(f"\nNew/updated columns: {', '.join(new_cols)}")
+
+
+if __name__ == '__main__':
+    main()
