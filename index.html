@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="utf-8">
-    <title>MWB Bouwmachines - Activiteit Visualisatie</title>
+    <title>NOx op de Bouwplaats</title>
     <link rel="stylesheet" href="src/style.css" type="text/css" media="screen" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -11,8 +11,16 @@
 
 <div id="main-wrapper">
     <header>
-        <h1>Bouwmachines Werkdag Analyse</h1>
-        <p class="subtitle">Visualisatie van vermogensstadia over meerdere dagen</p>
+        <div class="header-content">
+            <div class="header-left">
+                <h1>NOx op de Bouwplaats</h1>
+                <p class="subtitle">Hoe motorbelasting de uitstoot bepaalt</p>
+            </div>
+            <div class="header-logos">
+                <img src="assets/logos/Logo-TSL.svg" alt="Topstekkie Logistiek" class="logo-tsl">
+                <img src="assets/logos/Logo-SEB.svg" alt="SEB" class="logo-seb">
+            </div>
+        </div>
     </header>
 
     <div id="controls">
@@ -36,7 +44,7 @@
                 <label>Kleur gebaseerd op:</label>
                 <select id="color-mode-select">
                     <option value="gram_per_hour">NOx uitstoot (g/uur)</option>
-                    <option value="gram_per_liter">NOx per liter brandstof (g/L)</option>
+                    <option value="gram_per_liter" selected>NOx per liter brandstof (g/L)</option>
                     <option value="verschil_aub6">Verschil t.o.v. AUB6 (%)</option>
                 </select>
             </div>
@@ -46,10 +54,10 @@
                     <div class="gradient-bar"></div>
                     <div class="gradient-labels">
                         <span>0</span>
-                        <span>50</span>
-                        <span>100</span>
-                        <span>150</span>
-                        <span>200+</span>
+                        <span>8</span>
+                        <span>16</span>
+                        <span>24</span>
+                        <span>32+</span>
                     </div>
                 </div>
             </div>
@@ -80,6 +88,10 @@
 
     <div id="chart"></div>
 
+    <div id="insight-container">
+        <p id="insight-text-display" class="insight-display"></p>
+    </div>
+
     <div class="tooltip"></div>
 </div>
 
@@ -88,7 +100,7 @@
 <script>
 // Configuration (based on tutorial)
 var margin = {top: 100, right: 30, bottom: 70, left: 110},
-    width = 1400 - margin.left - margin.right,
+    width = 1300 - margin.left - margin.right,
     height = 550 - margin.top - margin.bottom;
 
 // NOTE: Data transformation (machine type mapping, power state, NOx calculations)
@@ -133,9 +145,105 @@ var animationInterval;
 var initialTimeout;
 var isPlaying = true;
 var animationSpeed = 1000; // milliseconds per update
-var currentColorMode = 'gram_per_hour'; // 'gram_per_hour', 'gram_per_liter', 'verschil_aub6'
+var currentColorMode = 'gram_per_liter'; // 'gram_per_hour', 'gram_per_liter', 'verschil_aub6'
 var stateTimeStats = {}; // Tracks cumulative time in each state per machine type
 var noxStats = {}; // Tracks cumulative NOx values per machine type
+
+// ============================================
+// INSIGHT OVERLAY SYSTEM
+// ============================================
+
+// Insight definitions - add your insights here
+var insightDefinitions = [
+    {
+        id: "dag1_kleur_legenda",
+        trigger: { dayNumber: 1, startTime: "00:30", endTime: "02:00" },
+        text: "De kleur van elke bubble toont de NOx-uitstoot — geel is laag, rood is hoog. Grijze bubbles zijn uitgeschakeld.",
+        highlight: {
+            type: "element",
+            selector: "#legend"
+        },
+        style: { effect: "glow", color: "#5da1d6" }
+    },
+    {
+        id: "dag1_vermogen_legenda",
+        trigger: { dayNumber: 1, startTime: "02:00", endTime: "03:30" },
+        text: "De grootte van elke bubble representeert het motorvermogen in kW — grotere bubbles zijn zwaardere machines.",
+        highlight: {
+            type: "element",
+            selector: "#power-legend"
+        },
+        style: { effect: "glow", color: "#5da1d6" }
+    },
+    {
+        id: "dag1_werkdag_start",
+        trigger: { dayNumber: 1, startTime: "05:00", endTime: "06:00" },
+        text: "De werkdag begint!",
+        highlight: {
+            type: "none"
+        },
+        style: { effect: "none", color: "#5da1d6" }
+    },
+    {
+        id: "dag1_hoge_belasting_types",
+        trigger: { dayNumber: 1, startTime: "07:00", endTime: "08:30" },
+        text: "Asfaltverdichting, asfaltverwerking, rupsgraaf- en mobiele graafmachines werken veel op hoge belasting.<br>Hierdoor werkt de katalysator goed en is de NOx-uitstoot <strong>LAAG</strong>",
+        highlight: {
+            type: "condition",
+            predicate: function(node) {
+                var targetTypes = ["Asfaltverdichting", "Asfaltverwerking", "Rupsgraafmachine", "Mobiele graafmachine"];
+                return targetTypes.includes(node.machine_type) && node.power_state === "Hoge belasting";
+            }
+        },
+        style: { effect: "glow", color: "#5da1d6" }
+    },
+    {
+        id: "dag1_heistelling_hijskraan",
+        trigger: { dayNumber: 1, startTime: "09:30", endTime: "11:00" },
+        text: "Heistellingen en hijskranen draaien veel op lage belasting en stationair.<br>Hierdoor werkt de katalysator slecht en is de NOx-uitstoot <strong>HOOG</strong>",
+        highlight: {
+            type: "condition",
+            predicate: function(node) {
+                var targetTypes = ["Heistelling", "Hijskraan"];
+                return targetTypes.includes(node.machine_type) &&
+                       (node.power_state === "Lage belasting" || node.power_state === "Stationair");
+            }
+        },
+        style: { effect: "glow", color: "#5da1d6" }
+    },
+    {
+        id: "dag1_middag",
+        trigger: { dayNumber: 1, startTime: "11:30", endTime: "13:00" },
+        text: "Middagpauze! Uitschakelen is ideaal — stationair draaien veroorzaakt juist hoge uitstoot door lage belasting.",
+        highlight: {
+            type: "condition",
+            predicate: function(node) {
+                return node.power_state === "Stationair" || node.power_state === "Uit";
+            }
+        },
+        style: { effect: "glow", color: "#5da1d6" }
+    },
+    {
+        id: "dag1_laag_vermogen",
+        trigger: { dayNumber: 1, startTime: "14:00", endTime: "15:00" },
+        text: "Machines met laag vermogen (kleine bubbles) hebben minder strenge emissie-eisen.<br>Hierdoor is de NOx-uitstoot per liter brandstof relatief <strong>HOOG</strong>",
+        highlight: {
+            type: "condition",
+            predicate: function(node) {
+                return node.power < 100 && node.power_state !== "Uit" && node.nox_gram_per_hour > 0;
+            }
+        },
+        style: { effect: "glow", color: "#5da1d6" }
+    }
+];
+
+// Insight state management
+var insightState = {
+    activeInsight: null,
+    shownInsights: new Set(),
+    insightStartTime: null,
+    highlightedNodes: new Set()
+};
 
 // Color scale configurations for different modes
 var colorScaleConfigs = {
@@ -195,7 +303,7 @@ var colorScaleConfigs = {
 };
 
 // Load CSV data (all transformations are pre-computed in prepare_bubble_data.py)
-d3.csv("data/aggregated_device_intervallen_20260122_143706.csv").then(function(data) {
+d3.csv("data/processed/aggregated_device_intervallen_20260122_143706.csv").then(function(data) {
     // Parse the data - columns are pre-computed by Python script
     machineData = data.map(function(d, i) {
         // Create combined datetime from event_date and time_interval
@@ -332,7 +440,7 @@ d3.csv("data/aggregated_device_intervallen_20260122_143706.csv").then(function(d
         var iconPath = machineIcons[type] || machineIcons['default'];
         svg.append("path")
             .attr("d", iconPath)
-            .attr("transform", "translate(" + (xPos - 10) + "," + (-62) + ") scale(0.75)")
+            .attr("transform", "translate(" + (xPos - 12) + "," + (-78) + ") scale(0.95)")
             .attr("class", "machine-icon")
             .attr("stroke", "#8BC34A")
             .attr("stroke-width", 2)
@@ -340,25 +448,36 @@ d3.csv("data/aggregated_device_intervallen_20260122_143706.csv").then(function(d
             .attr("stroke-linecap", "round")
             .attr("stroke-linejoin", "round");
 
-        // Machine type name
-        svg.append("text")
+        // Machine type name (split long names into 2 lines)
+        var labelText = svg.append("text")
             .attr("class", "machine-type-label")
             .attr("x", xPos)
-            .attr("y", -38)
             .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .style("font-size", "9px")
-            .text(type);
+            .style("font-size", "9px");
 
-        // Machine count and engine load on one line
-        svg.append("text")
-            .attr("class", "machine-stat-label")
-            .attr("x", xPos)
-            .attr("y", -25)
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .style("font-size", "8px")
-            .text(typeStats[type].machineCount + " | " + typeStats[type].engineLoad);
+        // Split long names for better readability
+        var splitNames = {
+            "Rupsgraafmachine": ["Rupsgraaf-", "machine"],
+            "Mobiele graafmachine": ["Mobiele", "graafmachine"],
+            "Asfaltverwerking": ["Asfalt-", "verwerking"],
+            "Asfaltverdichting": ["Asfalt-", "verdichting"]
+        };
+
+        if (splitNames[type]) {
+            labelText.append("tspan")
+                .attr("x", xPos)
+                .attr("y", -44)
+                .text(splitNames[type][0]);
+            labelText.append("tspan")
+                .attr("x", xPos)
+                .attr("y", -33)
+                .text(splitNames[type][1]);
+        } else {
+            labelText
+                .attr("y", -38)
+                .attr("dominant-baseline", "middle")
+                .text(type);
+        }
     });
 
     // Add labels for power states (y-axis)
@@ -417,32 +536,29 @@ d3.csv("data/aggregated_device_intervallen_20260122_143706.csv").then(function(d
             .attr("x", xPos)
             .attr("y", height + 20)
             .attr("text-anchor", "middle")
-            .style("font-size", "9px")
             .style("font-weight", "600")
             .style("fill", "#888")
-            .text("0 g/u");
+            .text("gem. 0 g/u");
 
         svg.append("text")
             .attr("class", "nox-stat-label")
             .attr("id", "nox-liter-" + type.replace(/\s+/g, '-'))
             .attr("x", xPos)
-            .attr("y", height + 32)
+            .attr("y", height + 20)
             .attr("text-anchor", "middle")
-            .style("font-size", "9px")
             .style("font-weight", "600")
             .style("fill", "#888")
-            .text("0 g/L");
+            .text("gem. 0 g/L");
 
         svg.append("text")
             .attr("class", "nox-stat-label nox-absolute")
             .attr("id", "nox-total-" + type.replace(/\s+/g, '-'))
             .attr("x", xPos)
-            .attr("y", height + 44)
+            .attr("y", height + 20)
             .attr("text-anchor", "middle")
-            .style("font-size", "9px")
             .style("font-weight", "600")
             .style("fill", "#1976D2")
-            .text("0 kg");
+            .text("gem. 0 kg");
     });
 
     // Create one node per machine
@@ -554,11 +670,30 @@ function initializeControls() {
     d3.select("#color-mode-select").on("change", function() {
         currentColorMode = this.value;
         updateLegend();
+        updateStatVisibility();
         // Update all bubble colors immediately
         circle.style("fill", function(d) {
             return colorScale(d);
         });
     });
+
+    // Initial stat visibility
+    updateStatVisibility();
+}
+
+// Update which stat label is visible based on color mode
+function updateStatVisibility() {
+    // Hide all stat labels
+    d3.selectAll(".nox-stat-label").style("display", "none");
+
+    // Show only the relevant one based on current color mode
+    if (currentColorMode === 'gram_per_hour') {
+        d3.selectAll("[id^='nox-hour-']").style("display", "block");
+    } else if (currentColorMode === 'gram_per_liter') {
+        d3.selectAll("[id^='nox-liter-']").style("display", "block");
+    } else if (currentColorMode === 'verschil_aub6') {
+        d3.selectAll("[id^='nox-total-']").style("display", "block");
+    }
 }
 
 // Update legend based on current color mode
@@ -590,11 +725,7 @@ function updateTimeDisplay() {
         var hours = String(date.getHours()).padStart(2, '0');
         var minutes = String(date.getMinutes()).padStart(2, '0');
 
-        // Calculate which day we're on (based on 144 intervals per day = 24 hours * 6 intervals)
-        var intervalsPerDay = 144;
-        var dayNumber = Math.floor(currentTimeIndex / intervalsPerDay) + 1;
-
-        d3.select("#current-time").text("Dag " + dayNumber + " " + hours + ":" + minutes);
+        d3.select("#current-time").text(hours + ":" + minutes);
     }
 }
 
@@ -653,13 +784,13 @@ function updateStatePercentages() {
         var totalColor = "#1976D2"; // Light blue for total
 
         d3.select("#nox-hour-" + type.replace(/\s+/g, '-'))
-            .text(avgNoxPerHourNum.toFixed(0) + " g/u")
+            .text("gem. " + avgNoxPerHourNum.toFixed(0) + " g/u")
             .style("fill", hourColor);
         d3.select("#nox-liter-" + type.replace(/\s+/g, '-'))
-            .text(avgNoxPerLiterNum.toFixed(1) + " g/L")
+            .text("gem. " + avgNoxPerLiterNum.toFixed(1) + " g/L")
             .style("fill", literColor);
         d3.select("#nox-total-" + type.replace(/\s+/g, '-'))
-            .text(avgNoxPerMachineKgNum.toFixed(1) + " kg")
+            .text("gem. " + avgNoxPerMachineKgNum.toFixed(1) + " kg")
             .style("fill", totalColor);
     });
 }
@@ -707,6 +838,7 @@ function startAnimation() {
         if (currentTimeIndex >= uniqueTimes.length) {
             currentTimeIndex = 0;
             resetStateStats(); // Reset statistics when animation loops
+            resetInsightState(); // Reset insights so they can show again
         }
 
         // Update time display based on global time
@@ -746,6 +878,9 @@ function startAnimation() {
         // Update state time percentages
         updateStatePercentages();
 
+        // Check for insight triggers
+        checkInsightTriggers();
+
         simulation.alpha(0.3).restart();
 
     }, animationSpeed);
@@ -762,6 +897,257 @@ function pauseAnimation() {
         clearInterval(animationInterval);
         animationInterval = null;
     }
+}
+
+// ============================================
+// INSIGHT OVERLAY FUNCTIONS
+// ============================================
+
+// Check if any insight should be triggered at current time
+function checkInsightTriggers() {
+    // Parse current time from uniqueTimes
+    if (!uniqueTimes[currentTimeIndex]) return;
+
+    var timestamp = uniqueTimes[currentTimeIndex];
+    var date = new Date(timestamp);
+    var currentHours = date.getHours();
+    var currentMinutes = date.getMinutes();
+    var currentTimeMinutes = currentHours * 60 + currentMinutes; // Total minutes since midnight
+    var dayNumber = Math.floor(currentTimeIndex / 144) + 1;
+
+    // Check if active insight should end (based on endTime)
+    if (insightState.activeInsight) {
+        var trigger = insightState.activeInsight.trigger;
+        var shouldEnd = false;
+
+        if (trigger.endTime) {
+            var endParts = trigger.endTime.split(":");
+            var endTimeMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+            if (currentTimeMinutes >= endTimeMinutes || dayNumber !== trigger.dayNumber) {
+                shouldEnd = true;
+            }
+        } else {
+            // Fallback to duration-based ending
+            var elapsed = Date.now() - insightState.insightStartTime;
+            if (elapsed >= insightState.activeInsight.duration) {
+                shouldEnd = true;
+            }
+        }
+
+        if (shouldEnd) {
+            hideInsight(insightState.activeInsight);
+        } else {
+            // Update highlights on each time step (nodes may have changed state)
+            updateHighlights(insightState.activeInsight);
+        }
+        return; // Don't show new insights while one is active
+    }
+
+    // Find matching insight to start
+    insightDefinitions.forEach(function(insight) {
+        if (insightState.shownInsights.has(insight.id)) return;
+
+        var trigger = insight.trigger;
+        if (trigger.dayNumber !== dayNumber) return;
+
+        // Support time range (startTime to endTime)
+        if (trigger.startTime && trigger.endTime) {
+            var startParts = trigger.startTime.split(":");
+            var endParts = trigger.endTime.split(":");
+            var startTimeMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+            var endTimeMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+
+            if (currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes) {
+                showInsight(insight);
+            }
+        }
+        // Support single time trigger (legacy)
+        else if (trigger.timeInterval) {
+            var triggerTime = trigger.timeInterval.substring(0, 5); // "HH:MM"
+            var triggerParts = triggerTime.split(":");
+            var triggerTimeMinutes = parseInt(triggerParts[0]) * 60 + parseInt(triggerParts[1]);
+            if (currentTimeMinutes === triggerTimeMinutes) {
+                showInsight(insight);
+            }
+        }
+    });
+}
+
+// Show an insight overlay
+function showInsight(insight) {
+    insightState.activeInsight = insight;
+    insightState.insightStartTime = Date.now();
+    insightState.shownInsights.add(insight.id);
+
+    // Add class to SVG for dimming non-highlighted bubbles (only if there are highlights)
+    if (insight.highlight.type !== "none") {
+        d3.select("#chart svg").classed("insight-active", true);
+    }
+
+    // Render text
+    renderInsightText(insight);
+
+    // Apply highlights to matching nodes
+    applyHighlights(insight);
+}
+
+// Hide the active insight overlay
+function hideInsight(insight) {
+    // Remove active class
+    d3.select("#chart svg").classed("insight-active", false);
+
+    // Fade out text in header
+    var textDisplay = document.getElementById("insight-text-display");
+    textDisplay.classList.remove("visible");
+
+    // Remove highlights
+    removeHighlights();
+
+    insightState.activeInsight = null;
+    insightState.highlightedNodes.clear();
+}
+
+// Render the insight text in the header area
+function renderInsightText(insight) {
+    var textDisplay = document.getElementById("insight-text-display");
+
+    // Get text color from style
+    var textColor = insight.style.color || "#4A90E2";
+
+    // Set text and color (innerHTML to support <br> and <strong> tags)
+    textDisplay.innerHTML = insight.text;
+    textDisplay.style.color = textColor;
+
+    // Fade in
+    textDisplay.classList.add("visible");
+}
+
+// Get nodes that match the highlight criteria
+function getMatchingNodes(highlight) {
+    var matchingIds = [];
+
+    switch(highlight.type) {
+        case "machineType":
+            nodes.forEach(function(node) {
+                if (node.machine_type === highlight.value) {
+                    matchingIds.push(node.id);
+                }
+            });
+            break;
+
+        case "powerState":
+            nodes.forEach(function(node) {
+                if (node.power_state === highlight.value) {
+                    matchingIds.push(node.id);
+                }
+            });
+            break;
+
+        case "machineIds":
+            matchingIds = highlight.value;
+            break;
+
+        case "condition":
+            nodes.forEach(function(node) {
+                if (highlight.predicate(node)) {
+                    matchingIds.push(node.id);
+                }
+            });
+            break;
+    }
+
+    return matchingIds;
+}
+
+// Apply visual highlights to matching nodes or elements
+function applyHighlights(insight) {
+    var style = insight.style;
+
+    // Handle no highlighting (text only)
+    if (insight.highlight.type === "none") {
+        return;
+    }
+
+    // Handle element highlighting (for legends, etc.)
+    if (insight.highlight.type === "element") {
+        var element = document.querySelector(insight.highlight.selector);
+        if (element) {
+            element.classList.add("legend-highlighted");
+            element.style.setProperty("--highlight-color", style.color || "#8BC34A");
+        }
+        return;
+    }
+
+    // Handle node/bubble highlighting
+    var matchingIds = getMatchingNodes(insight.highlight);
+
+    matchingIds.forEach(function(nodeId) {
+        insightState.highlightedNodes.add(nodeId);
+    });
+
+    circle.filter(function(d) {
+        return insightState.highlightedNodes.has(d.id);
+    })
+    .classed("insight-highlighted", true)
+    .classed("highlight-" + style.effect, true)
+    .style("--highlight-color", style.color || "#8BC34A");
+}
+
+// Remove all highlights from nodes and elements
+function removeHighlights() {
+    // Remove bubble highlights
+    circle
+        .classed("insight-highlighted", false)
+        .classed("highlight-glow", false)
+        .classed("highlight-pulse", false)
+        .classed("highlight-outline", false)
+        .style("--highlight-color", null);
+
+    // Remove element highlights (legends)
+    document.querySelectorAll(".legend-highlighted").forEach(function(el) {
+        el.classList.remove("legend-highlighted");
+        el.style.removeProperty("--highlight-color");
+    });
+}
+
+// Update highlights based on current node states (called each time step)
+function updateHighlights(insight) {
+    // No highlights or element highlights don't need updating per time step
+    if (insight.highlight.type === "none" || insight.highlight.type === "element") {
+        return;
+    }
+
+    // Get currently matching nodes
+    var matchingIds = getMatchingNodes(insight.highlight);
+    var matchingSet = new Set(matchingIds);
+
+    // Update the state
+    insightState.highlightedNodes = matchingSet;
+
+    var style = insight.style;
+
+    // Remove highlight from nodes that no longer match
+    circle.filter(function(d) {
+        return !matchingSet.has(d.id);
+    })
+    .classed("insight-highlighted", false)
+    .classed("highlight-" + style.effect, false);
+
+    // Add highlight to nodes that now match
+    circle.filter(function(d) {
+        return matchingSet.has(d.id);
+    })
+    .classed("insight-highlighted", true)
+    .classed("highlight-" + style.effect, true)
+    .style("--highlight-color", style.color || "#8BC34A");
+}
+
+// Reset shown insights (called when animation loops)
+function resetInsightState() {
+    if (insightState.activeInsight) {
+        hideInsight(insightState.activeInsight);
+    }
+    insightState.shownInsights.clear();
 }
 
 // Update positions on each tick

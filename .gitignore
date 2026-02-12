@@ -3,6 +3,10 @@ venv/
 env/
 ENV/
 
+# Node
+node_modules/
+package-lock.json
+
 # Jupyter Notebook
 .ipynb_checkpoints/
 */.ipynb_checkpoints/*

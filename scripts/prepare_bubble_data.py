@@ -5,8 +5,8 @@ Data Preparation for MWB Bubble Chart
 This script prepares the NOx interval data for the bubble chart visualization.
 All data transformations happen here - the JavaScript only visualizes.
 
-Input:  data/aggregated_device_intervallen_20260122_143706.csv
-Output: data/aggregated_device_intervallen_20260122_143706.csv (updated in place)
+Input:  data/processed/aggregated_device_intervallen_20260122_143706.csv
+Output: data/processed/aggregated_device_intervallen_20260122_143706.csv (updated in place)
 
 Transformations Applied:
 ------------------------
@@ -41,8 +41,8 @@ Transformations Applied:
 import pandas as pd
 
 # Configuration
-INPUT_FILE = 'data/aggregated_device_intervallen_20260122_143706.csv'
-OUTPUT_FILE = 'data/aggregated_device_intervallen_20260122_143706.csv'
+INPUT_FILE = 'data/processed/aggregated_device_intervallen_20260122_143706.csv'
+OUTPUT_FILE = 'data/processed/aggregated_device_intervallen_20260122_143706.csv'
 
 # Threshold for high/low load classification (25%)
 LOAD_THRESHOLD = 0.25

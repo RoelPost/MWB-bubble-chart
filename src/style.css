@@ -16,7 +16,7 @@ body {
 
 /* Layout */
 #main-wrapper {
-    width: 1600px;
+    width: fit-content;
     margin: 40px auto;
     background: white;
     padding: 40px;
@@ -30,6 +30,33 @@ header {
     padding-bottom: 20px;
     border-bottom: 3px solid #8BC34A;
 }
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    flex-shrink: 0;
+}
+
+.header-logos {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.logo-tsl {
+    height: 48px;
+    width: auto;
+}
+
+.logo-seb {
+    height: 36px;
+    width: auto;
+}
+
 
 h1 {
     font-size: 32px;
@@ -46,9 +73,32 @@ h1 {
     line-height: 1.6;
 }
 
+/* Insight text display at bottom */
+#insight-container {
+    text-align: center;
+    padding: 10px 40px;
+    min-height: 50px;
+    margin-top: -20px;
+}
+
+.insight-display {
+    font-size: 20px;
+    font-style: italic;
+    font-weight: 400;
+    color: #5da1d6;
+    opacity: 0;
+    transition: opacity 0.6s ease-out;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.insight-display.visible {
+    opacity: 1;
+}
+
 /* Controls */
 #controls {
-    display: flex;
+    display: inline-flex;
     justify-content: flex-start;
     align-items: stretch;
     gap: 0;
@@ -57,7 +107,6 @@ h1 {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
     border-radius: 4px;
-    max-width: 1400px;
 }
 
 #controls-left {
@@ -374,14 +423,11 @@ h1 {
 }
 
 .state-percentage {
-    font-size: 10px;
-    font-weight: 500;
-    fill: #888;
-    transition: fill 0.3s;
+    display: none;
 }
 
 .nox-stat-label {
-    font-size: 10px;
+    font-size: 12px;
     transition: fill 0.3s;
 }
 
@@ -399,4 +445,89 @@ h1 {
 .bubble:hover {
     stroke: rgba(0, 0, 0, 0.3);
     stroke-width: 2px;
+}
+
+/* ============================================
+   INSIGHT OVERLAY STYLES
+   ============================================ */
+
+/* Insight text - subtle and italic like FlowingData */
+.insight-text-content {
+    font-size: 15px;
+    font-style: italic;
+    font-weight: 400;
+    fill: #555;
+    letter-spacing: 0.2px;
+}
+
+.insight-text-bg {
+    fill: rgba(255, 255, 255, 0.92);
+    stroke: rgba(139, 195, 74, 0.25);
+    stroke-width: 1px;
+}
+
+/* Bubble highlight effects */
+.bubble.insight-highlighted {
+    /* No transition for instant state changes */
+}
+
+/* Glow effect - soft outer glow */
+.bubble.highlight-glow {
+    filter: drop-shadow(0 0 3px var(--highlight-color, #5da1d6))
+            drop-shadow(0 0 6px var(--highlight-color, #5da1d6));
+}
+
+/* Pulse effect - rhythmic animation */
+.bubble.highlight-pulse {
+    animation: insight-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes insight-pulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 2px var(--highlight-color, #5da1d6));
+    }
+    50% {
+        filter: drop-shadow(0 0 5px var(--highlight-color, #5da1d6))
+                drop-shadow(0 0 10px var(--highlight-color, #5da1d6));
+    }
+}
+
+/* Outline effect - contrasting border */
+.bubble.highlight-outline {
+    stroke: var(--highlight-color, #5da1d6) !important;
+    stroke-width: 2.5px !important;
+    stroke-opacity: 0.9;
+}
+
+/* Dim non-highlighted bubbles when insight is active */
+.insight-active .bubble:not(.insight-highlighted) {
+    opacity: 0.35;
+}
+
+/* Keep highlighted bubbles fully visible */
+.insight-active .bubble.insight-highlighted {
+    opacity: 1;
+}
+
+/* Legend highlight effect */
+.legend-highlighted {
+    animation: legend-pulse 1.5s ease-in-out infinite;
+    border-radius: 6px;
+    padding: 8px !important;
+    margin: -8px;
+    position: relative;
+}
+
+@keyframes legend-pulse {
+    0%, 100% {
+        box-shadow: 0 0 5px var(--highlight-color, #5da1d6),
+                    0 0 10px var(--highlight-color, #5da1d6);
+        background: rgba(255, 255, 255, 0.9);
+    }
+    50% {
+        box-shadow: 0 0 10px var(--highlight-color, #5da1d6),
+                    0 0 20px var(--highlight-color, #5da1d6),
+                    0 0 30px var(--highlight-color, #5da1d6);
+        background: rgba(255, 255, 255, 1);
+    }
 }
