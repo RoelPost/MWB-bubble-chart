@@ -1,0 +1,180 @@
+/* ============================================
+   VERHAAL (Narrative) — Additional Styles
+   Builds on scrollytelling.css
+   ============================================ */
+
+/* --- Element glow animation (reused from original) --- */
+.element-glow {
+    animation: legend-glow 1.5s ease-in-out infinite alternate;
+    border-radius: 8px;
+    position: relative;
+    z-index: 3;
+}
+
+@keyframes legend-glow {
+    from { box-shadow: 0 0 8px rgba(93, 161, 214, 0.4); }
+    to   { box-shadow: 0 0 20px rgba(93, 161, 214, 0.8); }
+}
+
+/* ============================================
+   CONTROL VISIBILITY
+   Original controls always hidden in verhaal
+   ============================================ */
+
+body.verhaal #controls {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Always hide color mode selector */
+body.verhaal #color-mode-control {
+    display: none;
+}
+
+/* ============================================
+   BOTTOM BAR — legends + time on one row
+   ============================================ */
+
+body.verhaal #verhaal-bottom-bar {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+    z-index: 5;
+    white-space: nowrap;
+}
+
+/* Show bottom bar from scene 2 onward */
+body.verhaal.scene-2 #verhaal-bottom-bar,
+body.verhaal.scene-3 #verhaal-bottom-bar,
+body.verhaal.scene-4 #verhaal-bottom-bar,
+body.verhaal.scene-5 #verhaal-bottom-bar,
+body.verhaal.scene-6 #verhaal-bottom-bar,
+body.verhaal.scene-7 #verhaal-bottom-bar {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* --- Color legend --- */
+body.verhaal #verhaal-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+body.verhaal #verhaal-legend .verhaal-legend-label {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+}
+
+/* --- Power legend (kW) — hidden until scene 4 (kW split) --- */
+body.verhaal #verhaal-power-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+body.verhaal.scene-4 #verhaal-power-legend,
+body.verhaal.scene-5 #verhaal-power-legend,
+body.verhaal.scene-6 #verhaal-power-legend,
+body.verhaal.scene-7 #verhaal-power-legend {
+    opacity: 1;
+}
+
+/* --- Time display — hidden until scene 7 --- */
+body.verhaal #verhaal-time {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+body.verhaal.scene-7 #verhaal-time {
+    opacity: 1;
+}
+
+body.verhaal #verhaal-time .time-label {
+    font-size: 11px;
+    color: #888;
+    font-weight: 500;
+}
+
+body.verhaal #verhaal-time .time-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+    font-variant-numeric: tabular-nums;
+    min-width: 40px;
+}
+
+body.verhaal #verhaal-play-pause {
+    font-size: 10px;
+    padding: 3px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f8f8f8;
+    color: #555;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+body.verhaal #verhaal-play-pause:hover {
+    background: #eee;
+}
+
+/* ============================================
+   STORY STEP STYLING
+   ============================================ */
+
+/* Larger step heights for narrative pacing */
+body.verhaal .story-step {
+    min-height: 90vh;
+}
+
+body.verhaal .story-step:first-child {
+    min-height: 50vh;
+}
+
+/* Step indicator pill badge */
+body.verhaal .step-indicator {
+    display: inline-block;
+    background: #f0f7e4;
+    color: #689F38;
+    padding: 4px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    text-transform: none;
+}
+
+/* Scene 7 step: blue accent */
+body.verhaal .story-step[data-step="6"] .step-content {
+    border-left-color: #5da1d6;
+}
+
+body.verhaal .story-step[data-step="6"] .step-indicator {
+    background: #e3f2fd;
+    color: #1976D2;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 900px) {
+    body.verhaal .step-content {
+        margin-left: auto;
+    }
+}

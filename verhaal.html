@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>NOx op de Bouwplaats — Het Verhaal</title>
+    <link rel="stylesheet" href="src/style.css" type="text/css" media="screen" />
+    <link rel="stylesheet" href="src/scrollytelling.css" type="text/css" media="screen" />
+    <link rel="stylesheet" href="src/verhaal.css" type="text/css" media="screen" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body class="scrollytelling verhaal">
+
+<!-- Hero / Introduction -->
+<section class="story-hero">
+    <div class="hero-content">
+        <div class="header-logos" style="margin-bottom: 24px;">
+            <img src="assets/logos/Logo-TSL.svg" alt="Topstekkie Logistiek" class="logo-tsl">
+            <img src="assets/logos/Logo-SEB.svg" alt="SEB" class="logo-seb">
+        </div>
+        <h1>NOx op de Bouwplaats</h1>
+        <p class="subtitle">Hoe kunnen we stikstofuitstoot beter inschatten?</p>
+        <p class="hero-intro">
+            Het meetprogramma Mobiele Werktuigen Bouw heeft ruim 500 machines gemeten,
+            waarvan 150 ook op stikstofoxide-uitstoot. Het doel: NOx accuraat inschatten
+            zodat we effectiever bouwvergunningen kunnen aanvragen en uitstoot gericht kunnen reduceren.
+            Scroll om te ontdekken hoe de data ons daarbij helpt.
+        </p>
+        <p class="scroll-hint">
+            Scroll om te beginnen
+            <span class="scroll-hint-arrow">&#8595;</span>
+        </p>
+    </div>
+</section>
+
+<!-- Scrollytelling container -->
+<div id="main-wrapper">
+    <div id="scroll-container">
+
+        <!-- Sticky chart area -->
+        <div id="chart-sticky">
+            <div id="controls">
+                <div id="controls-left">
+                    <div id="time-display">
+                        <span class="time-label">Tijd:</span>
+                        <span id="current-time">00:00</span>
+                    </div>
+                    <div id="speed-control">
+                        <label for="speed-slider">Snelheid:</label>
+                        <input type="range" id="speed-slider" min="100" max="2000" value="1100" step="100">
+                        <span id="speed-label">1x</span>
+                    </div>
+                    <button id="play-pause-btn">Pause</button>
+                </div>
+
+                <div id="controls-right">
+                    <div id="color-mode-control">
+                        <label>Kleur gebaseerd op:</label>
+                        <select id="color-mode-select">
+                            <option value="gram_per_hour">NOx uitstoot (g/uur)</option>
+                            <option value="gram_per_liter" selected>NOx per liter brandstof (g/L)</option>
+                            <option value="verschil_aub6">Verschil t.o.v. AUB6 (%)</option>
+                        </select>
+                    </div>
+
+                    <div id="legend">
+                        <div class="legend-gradient">
+                            <div class="gradient-bar"></div>
+                            <div class="gradient-labels">
+                                <span>0</span>
+                                <span>8</span>
+                                <span>16</span>
+                                <span>24</span>
+                                <span>32+</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="power-legend">
+                        <div class="power-legend-label">Vermogen (kW):</div>
+                        <div class="power-legend-bubbles">
+                            <div class="power-bubble-item">
+                                <svg width="8" height="18"><circle cx="4" cy="9" r="3" fill="#aaa"/></svg>
+                                <span>20</span>
+                            </div>
+                            <div class="power-bubble-item">
+                                <svg width="12" height="18"><circle cx="6" cy="9" r="5" fill="#aaa"/></svg>
+                                <span>150</span>
+                            </div>
+                            <div class="power-bubble-item">
+                                <svg width="16" height="18"><circle cx="8" cy="9" r="7" fill="#aaa"/></svg>
+                                <span>350</span>
+                            </div>
+                            <div class="power-bubble-item">
+                                <svg width="20" height="18"><circle cx="10" cy="9" r="9" fill="#aaa"/></svg>
+                                <span>500+</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chart"></div>
+
+            <!-- Bottom bar: legends + time indicator (all outside #controls) -->
+            <div id="verhaal-bottom-bar">
+                <!-- Time display (only visible in scene 6) -->
+                <div id="verhaal-time">
+                    <span class="time-label">Tijd:</span>
+                    <span id="verhaal-current-time" class="time-value">00:00</span>
+                    <button id="verhaal-play-pause">Pause</button>
+                </div>
+
+                <!-- Color legend -->
+                <div id="verhaal-legend">
+                    <div class="legend-gradient">
+                        <div class="gradient-bar"></div>
+                        <div class="gradient-labels">
+                            <span>0</span>
+                            <span>8</span>
+                            <span>16</span>
+                            <span>24</span>
+                            <span>32+</span>
+                        </div>
+                    </div>
+                    <div class="verhaal-legend-label">NOx per liter brandstof (g/L)</div>
+                </div>
+
+                <!-- Power legend (bubble size) -->
+                <div id="verhaal-power-legend">
+                    <div class="power-legend-label">Vermogen (kW):</div>
+                    <div class="power-legend-bubbles">
+                        <div class="power-bubble-item">
+                            <svg width="8" height="18"><circle cx="4" cy="9" r="3" fill="#aaa"/></svg>
+                            <span>20</span>
+                        </div>
+                        <div class="power-bubble-item">
+                            <svg width="12" height="18"><circle cx="6" cy="9" r="5" fill="#aaa"/></svg>
+                            <span>150</span>
+                        </div>
+                        <div class="power-bubble-item">
+                            <svg width="16" height="18"><circle cx="8" cy="9" r="7" fill="#aaa"/></svg>
+                            <span>350</span>
+                        </div>
+                        <div class="power-bubble-item">
+                            <svg width="20" height="18"><circle cx="10" cy="9" r="9" fill="#aaa"/></svg>
+                            <span>500+</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="insight-container">
+                <p id="insight-text-display" class="insight-display"></p>
+            </div>
+        </div>
+
+        <!-- Story steps -->
+        <div id="story-steps">
+
+            <!-- Scene 1: Grey Cloud -->
+            <div class="story-step active" data-step="0" data-scene="scene1_greyCloud">
+                <div class="step-content">
+                    <div class="step-indicator">150 machines</div>
+                    <h2>De Bouwplaats</h2>
+                    <p class="insight-extended">
+                        Elke punt is een bouwmachine waarvan de stikstofoxide-uitstoot
+                        is gemeten. 150 machines — van kleine generatoren tot zware
+                        heistellingen. Maar hoeveel NOx stoten ze uit? En waar hangt dat van af?
+                        Zonder dit inzicht kunnen we niet effectief vergunningen verlenen.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scene 2: Color Reveal -->
+            <div class="story-step" data-step="1" data-scene="scene2_colorReveal">
+                <div class="step-content">
+                    <div class="step-indicator">NOx-uitstoot per liter brandstof</div>
+                    <h2>Gram NOx per liter</h2>
+                    <p class="insight-extended">
+                        De kleur toont de gemiddelde NOx-uitstoot per liter brandstof.
+                        <strong>Groen</strong> is weinig, <strong>rood</strong> is veel.
+                        Wat direct opvalt: het verschil is groot. Voor CO2 weet je vrij
+                        precies hoeveel er per liter vrijkomt — voor stikstof ligt dat
+                        heel anders. Sommige machines stoten per liter wel vier keer meer
+                        NOx uit dan andere.
+                        [Topsector logistiek ontwikkelde samen met TNO een meetmethode die 
+                        iedereen kan toepassen om NOx uitstoot te meten https://topsectorlogistiek.nl/tno-en-topsector-logistiek-bundelen-krachten]
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scene 3: Machine Types -->
+            <div class="story-step" data-step="2" data-scene="scene5_typeSpread">
+                <div class="step-content">
+                    <div class="step-indicator">Machine types</div>
+                    <h2> Type machines en NOx uitstoot </h2>
+                    <p class="insight-extended">
+                        Als we de machines per type bekijken zie je dat uitstoot
+                        van het een type vaak hoger is dan de andere. Maar we zien ook grote verschillen
+                        voor dezelfde type machines, dus dit alleen vertelt niet
+                        het hele verhaal. 
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scene 4: Size + kW Split -->
+            <div class="story-step" data-step="3" data-scene="scene3_kwSplit">
+                <div class="step-content">
+                    <div class="step-indicator">Motorvermogen</div>
+                    <h2>Klein vs. groot</h2>
+                    <p class="insight-extended">
+                        De grootte toont nu het motorvermogen. Links de machines onder 56 kW,
+                        rechts de zwaardere machines. Europese emissienormen zijn strenger
+                        naarmate het vermogen hoger is. Het resultaat: de kleine, rode punten
+                        links stoten per liter brandstof meer NOx uit dan de grotere machines rechts.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scene 5: kW split + motorbelasting axis -->
+            <div class="story-step" data-step="4" data-scene="scene4_kwLoadSplit">
+                <div class="step-content">
+                    <div class="step-indicator">Motorbelasting</div>
+                    <h2>Motorbelasting verklaart de uitstoot</h2>
+                    <p class="insight-extended">
+                        Vooral voor machines met hoger motorvermogen is de belasting
+                        cruciaal. Bij lage belasting werkt de katalysator niet goed —
+                        elke liter brandstof zorgt dan voor meer NOx uitstoot. De hoogte toont
+                        de gemiddelde motorbelasting: motoren die beter belast worden(bovenin)
+                        stoten minder uit per liter.
+                        [Op basis van de data zijn de rekenmethoden voor vergunnignsaanvragen 
+                        aangescherpt, zie hier https://topsectorlogistiek.nl/direct-toepasbare-rekenregel-voor-bouwmachines]
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scene 6: Static power state grid (average positions) -->
+            <div class="story-step" data-step="5" data-scene="scene6_staticGrid">
+                <div class="step-content">
+                    <div class="step-indicator">Belastingsprofiel</div>
+                    <h2>Meten is weten</h2>
+                    <p class="insight-extended">
+                        De meeste machines hebben een herkenbaar belastingsprofiel. Voor
+                        sommige geeft het machinetype al een redelijke inschatting, maar
+                        voor andere is het belangrijk om de motorbelasting daadwerkelijk
+                        te meten. Gelukkig kan dat eenvoudig met brandstofverbruik en
+                        motorvermogen. 
+                        [De gemeten uitstoot van veel type bouwmachines zijn gepubliceerd op https://kennisbouwplaats.nl/meten ]
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scene 7: Day Animation -->
+            <div class="story-step" data-step="6" data-scene="scene7_dayAnimation">
+                <div class="step-content">
+                    <div class="step-indicator">Een werkdag</div>
+                    <h2>Slimmer inzetten</h2>
+                    <p class="insight-extended">
+                        Met deze data kunnen we ook leren hoe machines slimmer ingezet
+                        worden. De sensoren geven een gedetailleerd beeld van het gebruik
+                        over de dag. Kijk bijvoorbeeld wat er rond het middaguur gebeurt:
+                        veel machines gaan uit, maar een aantal blijft stationair draaien 
+                        wat zorgt voor extra hoge uistoot door de lage belasting. 
+                        [Inzichten en tips om slimmer te werken worden op de kennisbouwplaats gepubliceerd https://kennisbouwplaats.nl/emissies]
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Conclusion -->
+<section class="story-conclusion">
+    <h2>Meten, begrijpen, reduceren</h2>
+    <p>
+        Motorbelasting is de sleutel tot nauwkeurige NOx-inschatting. Door brandstofverbruik
+        en motorvermogen te meten, kunnen we de uitstoot per machine accuraat bepalen.
+        Dat maakt betere vergunningen mogelijk en laat zien waar de grootste winst te behalen is.
+    </p>
+    <p>
+        Bewuster inzetten, minder stationair draaien en slimme planning — de bouwsector
+        kan haar stikstofuitstoot aanzienlijk verlagen met de kennis die er al is.
+    </p>
+    <div class="conclusion-logos">
+        <img src="assets/logos/Logo-TSL.svg" alt="TSL">
+        <img src="assets/logos/Logo-SEB.svg" alt="SEB">
+    </div>
+</section>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<!-- Enable verhaal mode BEFORE loading chart -->
+<script>
+    window.scrollMode = true;
+    window.verhaalMode = true;
+</script>
+<script src="src/chart.js"></script>
+
+<!-- Scroll Controller -->
+<script>
+(function() {
+    var currentStep = -1;
+    var observer = null;
+
+    function initScrollController() {
+        setupObserver();
+    }
+
+    function setupObserver() {
+        var options = {
+            root: null,
+            rootMargin: "-35% 0px -35% 0px",
+            threshold: 0
+        };
+
+        observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var stepIndex = parseInt(entry.target.dataset.step);
+                    activateStep(stepIndex, entry.target);
+                }
+            });
+        }, options);
+
+        document.querySelectorAll('.story-step').forEach(function(step) {
+            observer.observe(step);
+        });
+    }
+
+    function activateStep(stepIndex, stepEl) {
+        if (stepIndex === currentStep) return;
+        currentStep = stepIndex;
+
+        // Update body class for CSS-driven control visibility
+        document.body.classList.remove('scene-1', 'scene-2', 'scene-3', 'scene-4', 'scene-5', 'scene-6', 'scene-7');
+        document.body.classList.add('scene-' + (stepIndex + 1));
+
+        // Update active class on all steps
+        document.querySelectorAll('.story-step').forEach(function(s) {
+            s.classList.toggle('active', parseInt(s.dataset.step) === stepIndex);
+        });
+
+        // Call the corresponding scene function
+        var sceneName = stepEl.dataset.scene;
+        if (sceneName && window.verhaalScenes && window.verhaalScenes[sceneName]) {
+            window.verhaalScenes[sceneName]();
+        }
+    }
+
+    // Wait for chart to be ready, then init
+    window.onChartReady = function() {
+        initScrollController();
+    };
+})();
+</script>
+
+</body>
+</html>
