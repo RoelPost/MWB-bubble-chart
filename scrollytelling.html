@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>NOx op de Bouwplaats — Het Verhaal</title>
+    <link rel="stylesheet" href="src/style.css" type="text/css" media="screen" />
+    <link rel="stylesheet" href="src/scrollytelling.css" type="text/css" media="screen" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body class="scrollytelling">
+
+<!-- Hero / Introduction -->
+<section class="story-hero">
+    <div class="hero-content">
+        <div class="header-logos" style="margin-bottom: 24px;">
+            <img src="assets/logos/Logo-TSL.svg" alt="Topstekkie Logistiek" class="logo-tsl">
+            <img src="assets/logos/Logo-SEB.svg" alt="SEB" class="logo-seb">
+        </div>
+        <h1>NOx op de Bouwplaats</h1>
+        <p class="subtitle">Hoe motorbelasting de uitstoot bepaalt</p>
+        <p class="hero-intro">
+            Bouwmachines zijn verantwoordelijk voor een groot deel van de stikstofoxide-uitstoot in Nederland.
+            Maar niet elke machine stoot evenveel uit. Het hangt sterk af van hoe de machine wordt ingezet.
+            Scroll door dit verhaal om te ontdekken hoe motorbelasting, machinetype en werkpatronen
+            de NOx-uitstoot op een echte bouwplaats bepalen.
+        </p>
+        <p class="scroll-hint">
+            Scroll om te beginnen
+            <span class="scroll-hint-arrow">&#8595;</span>
+        </p>
+    </div>
+</section>
+
+<!-- Scrollytelling container -->
+<div id="main-wrapper">
+    <div id="scroll-container">
+
+        <!-- Sticky chart area -->
+        <div id="chart-sticky">
+            <div id="controls">
+                <div id="controls-left">
+                    <div id="time-display">
+                        <span class="time-label">Tijd:</span>
+                        <span id="current-time">00:00</span>
+                    </div>
+                    <div id="speed-control">
+                        <label for="speed-slider">Snelheid:</label>
+                        <input type="range" id="speed-slider" min="100" max="2000" value="1100" step="100">
+                        <span id="speed-label">1x</span>
+                    </div>
+                    <button id="play-pause-btn">Pause</button>
+                </div>
+
+                <div id="controls-right">
+                    <div id="color-mode-control">
+                        <label>Kleur gebaseerd op:</label>
+                        <select id="color-mode-select">
+                            <option value="gram_per_hour">NOx uitstoot (g/uur)</option>
+                            <option value="gram_per_liter" selected>NOx per liter brandstof (g/L)</option>
+                            <option value="verschil_aub6">Verschil t.o.v. AUB6 (%)</option>
+                        </select>
+                    </div>
+
+                    <div id="legend">
+                        <div class="legend-gradient">
+                            <div class="gradient-bar"></div>
+                            <div class="gradient-labels">
+                                <span>0</span>
+                                <span>8</span>
+                                <span>16</span>
+                                <span>24</span>
+                                <span>32+</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="power-legend">
+                        <div class="power-legend-label">Vermogen (kW):</div>
+                        <div class="power-legend-bubbles">
+                            <div class="power-bubble-item">
+                                <svg width="8" height="18"><circle cx="4" cy="9" r="3" fill="#aaa"/></svg>
+                                <span>20</span>
+                            </div>
+                            <div class="power-bubble-item">
+                                <svg width="12" height="18"><circle cx="6" cy="9" r="5" fill="#aaa"/></svg>
+                                <span>150</span>
+                            </div>
+                            <div class="power-bubble-item">
+                                <svg width="16" height="18"><circle cx="8" cy="9" r="7" fill="#aaa"/></svg>
+                                <span>350</span>
+                            </div>
+                            <div class="power-bubble-item">
+                                <svg width="20" height="18"><circle cx="10" cy="9" r="9" fill="#aaa"/></svg>
+                                <span>500+</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chart"></div>
+
+            <div id="insight-container">
+                <p id="insight-text-display" class="insight-display"></p>
+            </div>
+        </div>
+
+        <!-- Story steps -->
+        <div id="story-steps">
+
+            <!-- Step 0: Intro spacer — chart shows 00:00 state -->
+            <div class="story-step active" data-step="0">
+                <div class="step-content">
+                    <div class="step-indicator">00:00</div>
+                    <h2>Een dag op de bouwplaats</h2>
+                    <p class="insight-extended">
+                        Elke bubble is een bouwmachine. De positie toont het machinetype (kolom) en de
+                        huidige belastingstoestand (rij). Het is nacht — bijna alle machines staan uit.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 1: Color Legend -->
+            <div class="story-step" data-step="1" data-insight="dag1_kleur_legenda">
+                <div class="step-content">
+                    <div class="step-indicator">00:30</div>
+                    <h2>Wat betekenen de kleuren?</h2>
+                    <p class="insight-original">
+                        De kleur van elke bubble toont de NOx-uitstoot — geel is laag, rood is hoog. Grijze bubbles zijn uitgeschakeld.
+                    </p>
+                    <p class="insight-extended">
+                        De kleurenschaal loopt van geel (weinig NOx per liter brandstof) naar rood (veel NOx per liter).
+                        Grijze bubbles zijn machines die uitstaan en dus geen brandstof verbruiken.
+                        Zo zie je in een oogopslag welke machines schoon draaien en welke niet.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 2: Bubble Size Legend -->
+            <div class="story-step" data-step="2" data-insight="dag1_vermogen_legenda">
+                <div class="step-content">
+                    <div class="step-indicator">02:00</div>
+                    <h2>Grote en kleine machines</h2>
+                    <p class="insight-original">
+                        De grootte van elke bubble representeert het motorvermogen in kW — grotere bubbles zijn zwaardere machines.
+                    </p>
+                    <p class="insight-extended">
+                        Het motorvermogen varieert van ongeveer 18 kW (een kleine generator) tot meer dan 500 kW
+                        (een zware heistelling). De oppervlakte van de bubble is evenredig met het vermogen,
+                        zodat je direct kunt zien welke machines het zwaarst zijn. Grotere machines verbruiken
+                        meer brandstof, maar zijn niet per se de grootste vervuilers.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3: Workday Begins -->
+            <div class="story-step" data-step="3" data-insight="dag1_werkdag_start">
+                <div class="step-content">
+                    <div class="step-indicator">05:00</div>
+                    <h2>De werkdag begint!</h2>
+                    <p class="insight-original">
+                        De werkdag begint!
+                    </p>
+                    <p class="insight-extended">
+                        Rond 05:00 uur worden de eerste machines gestart. Je ziet de bubbles omhoog bewegen
+                        van "Uit" naar de actieve belastingstoestanden. Sommige machines gaan direct aan het
+                        werk op hoge belasting, terwijl andere eerst stationair warm draaien. Let op hoe
+                        de kleuren veranderen: machines die aan het werk gaan krijgen hun NOx-kleur.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 4: High-Load Machine Types -->
+            <div class="story-step" data-step="4" data-insight="dag1_hoge_belasting_types">
+                <div class="step-content">
+                    <div class="step-indicator">07:00</div>
+                    <h2>Hoge belasting = lage uitstoot</h2>
+                    <p class="insight-original">
+                        Asfaltverdichting, asfaltverwerking, rupsgraaf- en mobiele graafmachines werken veel op
+                        hoge belasting. Hierdoor werkt de katalysator goed en is de NOx-uitstoot <strong>LAAG</strong>.
+                    </p>
+                    <p class="insight-extended">
+                        Bij hoge motorbelasting bereikt het uitlaatgas een temperatuur van meer dan 250&deg;C.
+                        Dat is precies wat de SCR-katalysator nodig heeft om stikstofoxiden effectief om te zetten
+                        in onschadelijk stikstof en water. Deze machinetypen — graafmachines en asfaltmachines —
+                        werken het grootste deel van de dag op vol vermogen. Dat is goed nieuws voor de luchtkwaliteit:
+                        hun NOx per liter brandstof is relatief laag.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 5: Cranes at Low Load -->
+            <div class="story-step" data-step="5" data-insight="dag1_heistelling_hijskraan">
+                <div class="step-content">
+                    <div class="step-indicator">09:30</div>
+                    <h2>Laag vermogen, hoge uitstoot</h2>
+                    <p class="insight-original">
+                        Heistellingen en hijskranen draaien veel op lage belasting en stationair.
+                        Hierdoor werkt de katalysator slecht en is de NOx-uitstoot <strong>HOOG</strong>.
+                    </p>
+                    <p class="insight-extended">
+                        Hijskranen en heistellingen hebben een ander werkprofiel: ze wachten veel, tillen
+                        kort, en staan dan weer stil. De motor draait daardoor grotendeels op lage toeren.
+                        Bij lage belasting is de uitlaatgastemperatuur te laag voor de katalysator. Het
+                        resultaat: dezelfde liter brandstof veroorzaakt tot wel vier keer meer NOx dan bij
+                        een graafmachine die op volle kracht werkt.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 6: Lunch Break -->
+            <div class="story-step" data-step="6" data-insight="dag1_middag">
+                <div class="step-content">
+                    <div class="step-indicator">11:30</div>
+                    <h2>Middagpauze: uitzetten helpt</h2>
+                    <p class="insight-original">
+                        Middagpauze! Uitschakelen is ideaal — stationair draaien veroorzaakt juist hoge uitstoot door lage belasting.
+                    </p>
+                    <p class="insight-extended">
+                        Tijdens de middagpauze staan veel machines stationair te draaien. De motor draait,
+                        brandstof wordt verbruikt, maar er wordt geen nuttig werk verricht. En omdat de
+                        motorbelasting zo laag is, werkt de katalysator nauwelijks. Het simpelweg uitzetten
+                        van de motor is de meest effectieve maatregel: nul brandstofverbruik, nul uitstoot.
+                        Op een grote bouwplaats kan dit tientallen kilo's NOx per dag schelen.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 7: Low-Power Machines -->
+            <div class="story-step" data-step="7" data-insight="dag1_laag_vermogen">
+                <div class="step-content">
+                    <div class="step-indicator">14:00</div>
+                    <h2>Kleine machines, minder strenge eisen</h2>
+                    <p class="insight-original">
+                        Machines met laag vermogen (kleine bubbles) hebben minder strenge emissie-eisen.
+                        Hierdoor is de NOx-uitstoot per liter brandstof relatief <strong>HOOG</strong>.
+                    </p>
+                    <p class="insight-extended">
+                        Europese emissienormen zijn strenger naarmate het motorvermogen hoger is. Machines
+                        onder de 56 kW vallen onder Stage IIIA of IIIB, terwijl grotere machines aan Stage IV
+                        of V moeten voldoen. Het gevolg: kleine machines zoals generatoren en compacte laders
+                        stoten per liter brandstof aanzienlijk meer NOx uit dan hun grotere collega's. Let op
+                        de rode kleuren bij de kleinere bubbles — ondanks hun lagere absolute uitstoot.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Conclusion -->
+<section class="story-conclusion">
+    <h2>Wat kunnen we hieraan doen?</h2>
+    <p>
+        De data laat zien dat motorbelasting de sleutel is. Machines die op hoge belasting werken
+        hebben een effectieve katalysator en lage NOx-uitstoot per liter brandstof. De grootste
+        winst zit in het verminderen van stationair draaien en het bewust inzetten van machines
+        op het juiste vermogensniveau.
+    </p>
+    <p>
+        Door bewust machinegebruik en slimme planning kan de bouwsector haar stikstofuitstoot
+        aanzienlijk verlagen — zonder te investeren in nieuwe machines.
+    </p>
+    <div class="conclusion-logos">
+        <img src="assets/logos/Logo-TSL.svg" alt="TSL">
+        <img src="assets/logos/Logo-SEB.svg" alt="SEB">
+    </div>
+</section>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<!-- Enable scroll mode BEFORE loading chart -->
+<script>window.scrollMode = true;</script>
+<script src="src/chart.js"></script>
+
+<!-- Scroll Controller -->
+<script>
+(function() {
+    var currentStep = -1;
+    var observer = null;
+    var insightTimeRanges = {};
+
+    // Convert HH:MM to time index in uniqueTimes
+    function timeToIndex(timeStr) {
+        var parts = timeStr.split(":");
+        var targetMinutes = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+
+        for (var i = 0; i < uniqueTimes.length; i++) {
+            var d = new Date(uniqueTimes[i]);
+            var totalMin = d.getHours() * 60 + d.getMinutes();
+            if (totalMin >= targetMinutes) {
+                return i;
+            }
+        }
+        return uniqueTimes.length - 1;
+    }
+
+    function initScrollController() {
+        // Pre-compute time index ranges for each insight
+        insightDefinitions.forEach(function(insight) {
+            var startIdx = timeToIndex(insight.trigger.startTime);
+            var endIdx = timeToIndex(insight.trigger.endTime);
+            // Use the midpoint as the starting display time
+            var midIdx = Math.floor((startIdx + endIdx) / 2);
+            insightTimeRanges[insight.id] = {
+                start: startIdx,
+                end: Math.max(startIdx, endIdx - 1),
+                mid: midIdx
+            };
+        });
+
+        setupObserver();
+    }
+
+    function setupObserver() {
+        var options = {
+            root: null,
+            rootMargin: "-35% 0px -35% 0px",
+            threshold: 0
+        };
+
+        observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var stepIndex = parseInt(entry.target.dataset.step);
+                    activateStep(stepIndex, entry.target);
+                }
+            });
+        }, options);
+
+        document.querySelectorAll('.story-step').forEach(function(step) {
+            observer.observe(step);
+        });
+    }
+
+    function activateStep(stepIndex, stepEl) {
+        if (stepIndex === currentStep) return;
+        currentStep = stepIndex;
+
+        // Update active class on all steps
+        document.querySelectorAll('.story-step').forEach(function(s) {
+            s.classList.toggle('active', parseInt(s.dataset.step) === stepIndex);
+        });
+
+        // Clear any active insight and animation
+        if (insightState.activeInsight) {
+            hideInsight(insightState.activeInsight);
+        }
+        pauseAnimation();
+        insightState.shownInsights.clear();
+
+        var insightId = stepEl.dataset.insight;
+
+        if (insightId && insightTimeRanges[insightId]) {
+            var range = insightTimeRanges[insightId];
+
+            // Jump to start of insight's time range
+            jumpToTime(range.start);
+
+            // Find and activate the matching insight
+            var insight = insightDefinitions.find(function(d) {
+                return d.id === insightId;
+            });
+            if (insight) {
+                showInsight(insight);
+            }
+
+            // Start gentle animation within the insight's time range
+            startRangeAnimation(range.start, range.end);
+        } else {
+            // No insight for this step — just show initial state (00:00)
+            jumpToTime(0);
+        }
+    }
+
+    // Wait for chart to be ready, then init
+    window.onChartReady = function() {
+        initScrollController();
+    };
+})();
+</script>
+
+</body>
+</html>
